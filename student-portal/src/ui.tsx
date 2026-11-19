@@ -1,3 +1,4 @@
+import { useAuth } from './auth/AuthProvider';
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -72,13 +73,14 @@ function NavigationItems({ route, close }: { route: string; close?: () => void }
 }
 
 function NavigationFooter({ close }: { close?: () => void }) {
+    const { logout } = useAuth();
     return (
         <div className="sidebar-bottom">
-            <a className="nav-link" href="#/login" onClick={close}
-                aria-label="Login UI preview" title="Login UI preview">
+            <button className="nav-link" type="button" onClick={() => { close?.(); void logout(); }}
+                aria-label="Sign out" title="Sign out">
                 <LockKeyhole size={18} aria-hidden="true" />
-                <span className="rail-label">Login UI preview</span>
-            </a>
+                <span className="rail-label">Sign out</span>
+            </button>
         </div>
     );
 }

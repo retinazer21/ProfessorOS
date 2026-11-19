@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Professor OS · Auth acceptance tests</title>
+<style>body{font:16px system-ui;max-width:950px;margin:40px auto;padding:20px;background:#101218;color:#eee}button,a{padding:10px;margin:6px;display:inline-block}button{cursor:pointer}pre{white-space:pre-wrap;background:#20242e;padding:20px;overflow-wrap:anywhere}p{line-height:1.5}</style></head>
+<body><h1>Auth acceptance tests — fictional accounts only</h1>
+<p>This local development test page shares the portal's managed Supabase session. Sign in and complete MFA in the existing portal tab. No password, QR secret, or token appears in this report.</p>
+<a href="/#/login" target="_blank" rel="noopener">Open existing Student Portal</a>
+<p id="status" role="status">Loading session…</p>
+<button id="inspect">Inspect session</button><button id="pre">Check access before MFA</button>
+<button id="verified">Check verified RBAC and student isolation</button>
+<button id="refresh">Refresh managed session</button><button id="capture">Capture session for logout test</button>
+<button id="replay">Check logout and token replay</button>
+<p>For logout: capture the session here, then use Sign out in the portal tab, then run the logout check here. Captured tokens remain only in this tab's memory.</p>
+<pre id="report" aria-live="polite">No checks run.</pre>
+<script type="module" src="./browser-e2e.mjs"></script></body></html>

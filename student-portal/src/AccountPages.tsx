@@ -1,5 +1,6 @@
+import { AuthForm } from './auth/AuthForm';
+import { useAuth } from './auth/AuthProvider';
 import {
-    ArrowLeft,
     ArrowRight,
     CircleHelp,
     Fingerprint,
@@ -11,6 +12,7 @@ import { student } from "./demo";
 import { Brand, PageIntro, Panel, SectionHeading } from "./ui";
 
 export function Profile() {
+    const { access, logout } = useAuth();
     return (
         <>
             <PageIntro
@@ -52,7 +54,7 @@ export function Profile() {
                     <Panel>
                         <SectionHeading
                             label="ACCOUNT"
-                            title="Security preview"
+                            title="Account security"
                         />
                         <div className="security-row">
                             <span className="stat-icon violet">
@@ -61,13 +63,10 @@ export function Profile() {
                             <div>
                                 <strong>Sign-in experience</strong>
                                 <p>
-                                    Explore the visual login flow. No
-                                    credentials are checked.
+                                    {access.email} · {access.role}
                                 </p>
                             </div>
-                            <a className="button-secondary" href="#/login">
-                                Preview <ArrowRight size={15} />
-                            </a>
+                            <button className="button-secondary" onClick={() => void logout()}>Sign out</button>
                         </div>
                         <div className="security-row">
                             <span className="stat-icon blue">
@@ -76,13 +75,10 @@ export function Profile() {
                             <div>
                                 <strong>Multi-factor verification</strong>
                                 <p>
-                                    See the future verification screen without
-                                    submitting a code.
+                                    Authenticator verification is required before workspace access.
                                 </p>
                             </div>
-                            <a className="button-secondary" href="#/mfa">
-                                Preview <ArrowRight size={15} />
-                            </a>
+                            <span className="profile-chip">Verified</span>
                         </div>
                     </Panel>
                     <Panel className="privacy-panel">
@@ -91,8 +87,7 @@ export function Profile() {
                             <h2>Built for a clear boundary</h2>
                             <p>
                                 This prototype contains only fictional academic
-                                data. It has no account, authentication,
-                                database, or server connection.
+                                data. Account authentication is live; academic data integration is pending.
                             </p>
                         </div>
                     </Panel>
@@ -102,85 +97,28 @@ export function Profile() {
     );
 }
 
-export function AuthPreview({ mfa }: { mfa: boolean }) {
+export function AuthScreen({ mfa }: { mfa: boolean }) {
+    const { error } = useAuth();
     return (
         <div className="auth-page">
             <div className="auth-form-side">
                 <Brand />
                 <div className="auth-center">
                     <span className="eyebrow">
-                        VISUAL PREVIEW · NO AUTHENTICATION
+                        UNIVERSITY ACCOUNT
                     </span>
                     <h1>
                         {mfa ? "One more step." : "Your learning space awaits."}
                     </h1>
                     <p className="auth-lede">
                         {mfa
-                            ? "This is a preview of a future verification screen. No code is sent or checked."
-                            : "A quiet place to follow your academic journey. This screen does not sign you in."}
+                            ? "Verify with your authenticator to access your workspace."
+                            : "A quiet place to follow your academic journey. Sign in with your university account."}
                     </p>
-                    {mfa ? (
-                        <div className="auth-card">
-                            <label htmlFor="mfa-code">
-                                Verification code preview
-                            </label>
-                            <input
-                                id="mfa-code"
-                                type="text"
-                                inputMode="numeric"
-                                maxLength={6}
-                                placeholder="000000"
-                                autoComplete="off"
-                            />
-                            <p>
-                                For display only. Entering a code has no effect.
-                            </p>
-                            <a
-                                className="button-primary auth-button"
-                                href="#/dashboard"
-                            >
-                                Open fictional workspace demo{" "}
-                                <ArrowRight size={17} />
-                            </a>
-                            <a className="auth-back" href="#/login">
-                                <ArrowLeft size={15} /> Back to login preview
-                            </a>
-                        </div>
-                    ) : (
-                        <div className="auth-card">
-                            <label htmlFor="email">Student email preview</label>
-                            <input
-                                id="email"
-                                type="email"
-                                placeholder="name@example.edu"
-                                autoComplete="off"
-                            />
-                            <label htmlFor="password">Password preview</label>
-                            <input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                autoComplete="off"
-                            />
-                            <p>
-                                These fields are visual only and are never
-                                submitted.
-                            </p>
-                            <a
-                                className="button-primary auth-button"
-                                href="#/mfa"
-                            >
-                                Preview MFA screen <ArrowRight size={17} />
-                            </a>
-                            <a className="auth-back" href="#/dashboard">
-                                Open fictional workspace demo{" "}
-                                <ArrowRight size={15} />
-                            </a>
-                        </div>
-                    )}
+                    {error && <p role="alert">{error}</p>}
+                    <AuthForm mfa={mfa} />
                     <p className="auth-disclaimer">
-                        <ShieldCheck size={15} /> Fictional demo · no account
-                        session or security claim
+                        <ShieldCheck size={15} /> Managed authentication · MFA required
                     </p>
                 </div>
                 <span className="auth-footer">

@@ -2,7 +2,7 @@
 
 An offline-first desktop workspace for university professors, built as an academic software engineering project with an emphasis on clarity, maintainability and explainable design.
 
-**Status: Compose Desktop remains the complete professor workspace.** Courses, students, terms, offerings/enrollment, lectures, Question Bank, Exam Builder, Gradebook, Attendance and Settings have Compose screens, including student Excel import, grade/attendance Excel export and exam PDF preview/export. Academic records are persisted locally; dashboard metrics use saved records. A separate [Student Portal Phase 1 visual prototype](student-portal/README.md) now lives in `student-portal/`; its data and login/MFA screens are fictional previews, with no desktop or database connection.
+**Status: Compose Desktop remains the complete professor workspace.** Courses, students, terms, offerings/enrollment, lectures, Question Bank, Exam Builder, Gradebook, Attendance and Settings have Compose screens, including student Excel import, grade/attendance Excel export and exam PDF preview/export. Academic records are persisted locally; dashboard metrics use saved records. A separate [Student Portal](student-portal/README.md) lives in `student-portal/`; it now uses real Supabase authentication, required MFA and RLS/RBAC. Its academic displays remain fictional, with no desktop data synchronization.
 
 ## Implemented
 
@@ -156,7 +156,7 @@ prototype-compose/
   src/main/kotlin/           Compose screens, controllers and Java bridge
   src/main/resources/        Desktop fonts and icons
   src/test/kotlin/           Workflow, rendering and runtime-isolation tests
-student-portal/               Isolated web-only student visual prototype
+student-portal/               Separate student portal with managed Supabase Auth
 data/                        Local database (ignored)
 exports/                     Generated PDF/Excel exports (ignored)
 target/                      Maven output and test reports (ignored)
@@ -181,3 +181,7 @@ Local databases, backups, generated Graphify output, development exports, build 
 ## Windows installer
 
 Build the self-contained Windows EXE with `tools/package-windows.ps1` after configuring JDK 25. Installed users need no Java or Gradle; user data stays under `%LOCALAPPDATA%\ProfessorOS\data`. See [Windows packaging and verification](docs/WINDOWS_PACKAGING.md) for icons, upgrades, storage overrides and release checks.
+
+### Student Portal authentication
+
+The separate Student Portal now integrates managed Supabase Auth, required TOTP MFA, and RLS/RBAC. Its academic displays remain fictional. See [setup, live verification and prerequisites](student-portal/AUTH_SETUP.md). Desktop storage and authentication behavior are unchanged.

@@ -1,0 +1,40 @@
+{
+  "run": "professor-os-e2e-20261113",
+  "project": "bsvrqsqftmaoehlappbv",
+  "records": [
+    {
+      "id": "0621ed6e-af4c-4f74-b7fa-13cc27522e4c",
+      "kind": "grade",
+      "label": "E2E ONLY fictional Student A grade",
+      "value": "72",
+      "student_id": "894659e5-c2ed-429d-a7fe-952fa29a82d8",
+      "offering_id": "b5ad5efc-2093-4a2d-80d9-206e5082d4d1"
+    },
+    {
+      "id": "90a7a9fd-1808-4c55-837f-315f016c29e6",
+      "kind": "grade",
+      "label": "E2E ONLY fictional Student B grade",
+      "value": "84",
+      "student_id": "6e2bf4b3-6fd1-47ec-a69c-90959d97483f",
+      "offering_id": "b5ad5efc-2093-4a2d-80d9-206e5082d4d1"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "ac064ccb-3d34-4aa1-b7d9-342da2ff7ee2",
+      "role": "professor",
+      "email": "professor-os-e2e-professor@example.invalid"
+    },
+    {
+      "id": "894659e5-c2ed-429d-a7fe-952fa29a82d8",
+      "role": "student",
+      "email": "professor-os-e2e-student-a@example.invalid"
+    },
+    {
+      "id": "6e2bf4b3-6fd1-47ec-a69c-90959d97483f",
+      "role": "student",
+      "email": "professor-os-e2e-student-b@example.invalid"
+    }
+  ],
+  "offering": "b5ad5efc-2093-4a2d-80d9-206e5082d4d1"
+}

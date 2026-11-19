@@ -1,3 +1,4 @@
+import { useAuth } from './auth/AuthProvider';
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, MotionConfig, useReducedMotion } from "motion/react";
 import { courses } from "./demo";
@@ -9,7 +10,7 @@ import {
     Grades,
 } from "./AcademicPages";
 import { Dashboard } from "./Dashboard";
-import { AuthPreview, NotFound, Profile } from "./AccountPages";
+import { AuthScreen, NotFound, Profile } from "./AccountPages";
 import "./studio-pages.css";
 
 function useRoute() {
@@ -30,7 +31,9 @@ function resetRouteScroll(node: HTMLDivElement | null) {
 }
 
 export default function App() {
-    const route = useRoute();
+    const requestedRoute = useRoute();
+    const { access, error, logout, refresh } = useAuth();
+    const route = ['/login', '/mfa'].includes(requestedRoute) ? '/dashboard' : requestedRoute;
     const reduceMotion = useReducedMotion();
     const [menuOpen, setMenuOpen] = useState(false);
     useEffect(() => {
@@ -46,16 +49,9 @@ export default function App() {
             window.removeEventListener("hashchange", closeDrawer);
         };
     }, []);
-    if (route === "/login" || route === "/mfa")
-        return <MotionConfig reducedMotion="user">
-            <AnimatePresence mode="wait" initial={false}>
-                <motion.div key={route} ref={resetRouteScroll} initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }}
-                    animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
-                    transition={{ duration: reduceMotion ? 0 : 0.3 }}>
-                    <AuthPreview mfa={route === "/mfa"} />
-                </motion.div>
-            </AnimatePresence>
-        </MotionConfig>;
+    if (access.stage === 'loading') return <div className="auth-page"><div className="auth-center" role="status">Checking secure access…</div></div>;
+    if (access.stage === 'login' || access.stage === 'mfa') return <AuthScreen key={access.stage} mfa={access.stage === 'mfa'} />;
+    if (access.stage !== 'ready') return <div className="auth-page"><div className="auth-center"><h1>Access unavailable</h1><p role="alert">{error || 'Your university has not assigned portal access. Contact your administrator.'}</p><button className="button-secondary" onClick={() => void refresh()}>Retry</button><button className="button-primary" onClick={() => void logout()}>Sign out</button></div></div>;
     const detail = route.startsWith("/courses/")
         ? courses.find((c) => c.id === route.slice("/courses/".length))
         : undefined;

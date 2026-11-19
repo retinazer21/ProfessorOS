@@ -268,3 +268,6 @@
     .studio-pages .course-open > svg, .studio-pages .text-link > svg,
     .studio-pages .result-table td:last-child a > svg { transition: none; }
 }
+
+.mfa-qr { width: 200px; height: 200px; background: white; padding: 12px; border-radius: 12px; }
+.auth-card button:disabled { opacity: .55; cursor: wait; }

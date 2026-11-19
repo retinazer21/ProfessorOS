@@ -94,3 +94,5 @@ $RECYCLE.BIN/
 *.pfx
 credentials.json
 secrets.json
+
+/.tools/
