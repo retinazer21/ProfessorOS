@@ -2,7 +2,7 @@
 
 An offline-first academic workspace for university professors, with a separate Student Portal secured by Supabase Auth. The desktop application manages saved teaching records locally; the portal provides managed sign-in and MFA in the existing Studio Window interface.
 
-**Student Portal — planned GitHub Pages address:** [canganauto-dot.github.io/Uni-Project](https://canganauto-dot.github.io/Uni-Project/). Hosting is prepared but publication has not been performed by this change.
+**Student Portal — planned GitHub Pages address:** [retinazer21.github.io/ProfessorOS](https://retinazer21.github.io/ProfessorOS/). Hosting is prepared but publication has not been performed by this change.
 
 > Portal authentication is real. Course, grade, attendance and profile displays remain clearly labeled fictional previews. Desktop-to-portal publishing and real academic data integration are not implemented.
 
@@ -70,8 +70,8 @@ Domain models remain independent of UI and database access. Desktop services own
 Requires **JDK 25**, `JAVA_HOME` pointing to that JDK, and a graphical desktop. Maven and Gradle wrappers download their pinned dependencies on first use.
 
 ```powershell
-git clone https://github.com/canganauto-dot/Uni-Project.git
-cd Uni-Project
+git clone https://github.com/retinazer21/ProfessorOS.git
+cd ProfessorOS
 .\prototype-compose\gradlew.bat -p prototype-compose run
 ```
 
@@ -91,7 +91,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Open the printed URL at `/Uni-Project/`. Only a Supabase `sb_publishable_` key belongs in browser configuration. University accounts and student/professor roles must be provisioned by an administrator; public registration is disabled. See [portal setup](student-portal/README.md) and [Auth configuration](student-portal/AUTH_SETUP.md).
+Open the printed URL at `/ProfessorOS/`. Only a Supabase `sb_publishable_` key belongs in browser configuration. University accounts and student/professor roles must be provisioned by an administrator; public registration is disabled. See [portal setup](student-portal/README.md) and [Auth configuration](student-portal/AUTH_SETUP.md).
 
 ## Cybersecurity and data protection
 
@@ -116,7 +116,7 @@ npm run check:pages
 npm run preview
 ```
 
-Preview opens the production build under `/Uni-Project/`. The Pages check validates asset responses, base paths, hash-route entry, logout routing and artifact hygiene. Live Supabase tests require an authorized project and separate configuration; see [Auth setup](student-portal/AUTH_SETUP.md).
+Preview opens the production build under `/ProfessorOS/`. The Pages check validates asset responses, base paths, hash-route entry, logout routing and artifact hygiene. Live Supabase tests require an authorized project and separate configuration; see [Auth setup](student-portal/AUTH_SETUP.md).
 
 For desktop source changes, close the app and run Maven and Compose tests **sequentially**:
 
@@ -129,7 +129,7 @@ Tests use isolated fixtures. See [desktop setup](prototype-compose/README.md), [
 
 ## GitHub Pages hosting
 
-The portal uses Vite base `/Uni-Project/` and hash routes such as `/Uni-Project/#/login`. GitHub Pages publishes only `student-portal/dist`, never the repository, desktop files, SQL, tests or local environment files.
+The portal uses Vite base `/ProfessorOS/` and hash routes such as `/ProfessorOS/#/login`. GitHub Pages publishes only `student-portal/dist`, never the repository, desktop files, SQL, tests or local environment files.
 
 The **Student Portal Pages** workflow runs only when manually requested on `main`. Its **deploy** option defaults to **false**. Building or pushing does not publish anything. Before an approved publication, configure repository variables, Pages and the Supabase production URL as described in the [Pages runbook](student-portal/PAGES_SETUP.md). That runbook includes verification and rollback steps.
 

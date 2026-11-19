@@ -1,18 +1,18 @@
 # GitHub Pages preparation and manual publication
 
-Target: **https://canganauto-dot.github.io/Uni-Project/**. This is the intended address, not a claim that hosting is already active. No deployment was performed during preparation.
+Target: **https://retinazer21.github.io/ProfessorOS/**. This is the intended address, not a claim that hosting is already active. No deployment was performed during preparation.
 
 ## Configuration before publication
 
 1. In GitHub repository Settings → Pages, select **GitHub Actions** as the publishing source. Do not select a source branch containing project files.
 2. In Settings → Secrets and variables → Actions → Variables, set repository variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from the intended project. The key must start with `sb_publishable_`. These values are public client configuration embedded in JavaScript. Never use a service-role, secret, database password or personal access token here. The workflow rejects missing/placeholder configuration.
 3. Review the `github-pages` environment and restrict deployment branches to `main`; enable required reviewers when your GitHub plan supports them.
-4. In Supabase Authentication → URL Configuration, set the production **Site URL** to `https://canganauto-dot.github.io/Uni-Project/`. Keep localhost development URLs only if needed, and prefer exact production redirect allowlist entries over broad wildcards. These dashboard changes are manual prerequisites, not changes performed by this task.
+4. In Supabase Authentication → URL Configuration, set the production **Site URL** to `https://retinazer21.github.io/ProfessorOS/`. Keep localhost development URLs only if needed, and prefer exact production redirect allowlist entries over broad wildcards. These dashboard changes are manual prerequisites, not changes performed by this task.
 5. Confirm public signup remains disabled, TOTP enabled, university accounts provisioned and reviewed RLS applied. Hosting a frontend does not deploy SQL or provision accounts. Never reapply or edit an already-applied migration.
 
 ## Authentication and URL behavior
 
-The current implementation signs in with email/password and verifies TOTP through the Supabase SDK. It does **not** send users through OAuth, email-link or password-reset redirects. `detectSessionInUrl: false` prevents the SDK from consuming the application hash as an Auth callback. Navigating to `#/login`, `#/mfa` or `#/grades` preserves `/Uni-Project/`; logout changes only the fragment to `/login`.
+The current implementation signs in with email/password and verifies TOTP through the Supabase SDK. It does **not** send users through OAuth, email-link or password-reset redirects. `detectSessionInUrl: false` prevents the SDK from consuming the application hash as an Auth callback. Navigating to `#/login`, `#/mfa` or `#/grades` preserves `/ProfessorOS/`; logout changes only the fragment to `/login`.
 
 Do not point invite/reset/OAuth links at these hash routes and expect them to work. Recovery and callback screens remain unimplemented; adding a redirect allowlist entry does not implement them. A future PKCE callback must deliberately exchange its code, restore a validated internal destination under the base path and be tested separately. Managed sessions are origin-scoped; localhost sessions will not carry over to the Pages origin.
 
@@ -28,7 +28,7 @@ npm run check:pages
 npm run preview
 ```
 
-Open the preview at `http://localhost:4173/Uni-Project/`. Local `.env.local` stays ignored. In Actions, select **Student Portal Pages → Run workflow → main**, leaving **deploy unchecked**. That explicit run builds, checks and uploads only `dist`; it does not deploy. No push or pull-request trigger exists.
+Open the preview at `http://localhost:4173/ProfessorOS/`. Local `.env.local` stays ignored. In Actions, select **Student Portal Pages → Run workflow → main**, leaving **deploy unchecked**. That explicit run builds, checks and uploads only `dist`; it does not deploy. No push or pull-request trigger exists.
 
 The artifact contains the application HTML, compiled assets and public favicon. Sources, SQL, local test runners, audit backups and environment files are not copied. Automated checks reject unexpected sensitive file types, private-key markers and embedded literal session tokens. They are a guard, not a replacement for reviewing public assets and frontend content before publication.
 

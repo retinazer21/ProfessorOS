@@ -12,7 +12,7 @@ npm ci
 npm run dev
 ```
 
-Open `/Uni-Project/` at the local origin printed by Vite. Protected routes show login until password authentication, MFA, and administrator-assigned access are verified.
+Open `/ProfessorOS/` at the local origin printed by Vite. Protected routes show login until password authentication, MFA, and administrator-assigned access are verified.
 
 ## Verify
 
@@ -23,11 +23,11 @@ npm test
 npm run check:pages
 ```
 
-The production files are written to `dist/`. Inspect them with `npm run preview` at `http://localhost:4173/Uni-Project/`. Vite uses base `/Uni-Project/`; application routes remain hash-based.
+The production files are written to `dist/`. Inspect them with `npm run preview` at `http://localhost:4173/ProfessorOS/`. Vite uses base `/ProfessorOS/`; application routes remain hash-based.
 
 ## GitHub Pages
 
-Intended URL: [canganauto-dot.github.io/Uni-Project](https://canganauto-dot.github.io/Uni-Project/). Hosting is prepared, not deployed by this change. The manual-only **Student Portal Pages** workflow builds and checks by default; publication requires explicitly selecting its deploy option. Only `dist/` is uploaded. Configure the public Supabase repository variables and dashboard URL settings using the [Pages runbook](PAGES_SETUP.md). Password/TOTP login has no redirect callback; email recovery, invite and OAuth callback screens are not implemented. Desktop build and installer workflows are outside this deployment.
+Intended URL: [retinazer21.github.io/ProfessorOS](https://retinazer21.github.io/ProfessorOS/). Hosting is prepared, not deployed by this change. The manual-only **Student Portal Pages** workflow builds and checks by default; publication requires explicitly selecting its deploy option. Only `dist/` is uploaded. Configure the public Supabase repository variables and dashboard URL settings using the [Pages runbook](PAGES_SETUP.md). Password/TOTP login has no redirect callback; email recovery, invite and OAuth callback screens are not implemented. Desktop build and installer workflows are outside this deployment.
 
 ## Scope
 

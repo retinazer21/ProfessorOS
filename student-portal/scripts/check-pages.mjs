@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { preview } from 'vite';
 
-const base = '/Uni-Project/';
+const base = '/ProfessorOS/';
 const artifactPaths = [];
 const html = await readFile('dist/index.html', 'utf8');
 const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m => m[1]);
