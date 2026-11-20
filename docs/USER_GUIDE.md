@@ -135,8 +135,8 @@ Changing the directory selects a different database; it does not migrate or copy
 ## Directory overview
 
 ```text
-AGENTS.md                     Permanent AI development rules
-PROJECT_NOTES.md              Technical notebook and decisions
+
+
 pom.xml                      Java backend dependencies, compiler and tests
 mvnw / mvnw.cmd              Portable Maven entry points
 src/main/java/com/professoros/
@@ -163,7 +163,7 @@ target/                      Maven output and test reports (ignored)
 prototype-compose/build/     Compose output and screenshots (ignored)
 ```
 
-Read [AGENTS.md](../AGENTS.md) before changing code and record significant decisions in [PROJECT_NOTES.md](../PROJECT_NOTES.md). Future teaching features should attach to CourseOffering or Enrollment as appropriate.
+
 
 
 ## Migration startup troubleshooting
@@ -176,7 +176,6 @@ The [demo workspace guide](../docs/DEMO_WORKSPACE.md) describes the explicit bac
 
 ## Repository publication
 
-Local databases, backups, generated Graphify output, development exports, build outputs, caches and credentials are excluded from Git. A fresh checkout creates an empty workspace on first launch; demo records require the explicit maintenance workflow. Keep font provenance/licenses, wrapper files, historical migrations and test fixtures in the repository. Check `git status` and staged filenames before publishing. See [publication cleanup record](../docs/PUBLICATION_CLEANUP.md).
 
 ## Windows installer
 

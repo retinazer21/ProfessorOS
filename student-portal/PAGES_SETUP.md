@@ -1,6 +1,6 @@
-# GitHub Pages preparation and manual publication
+# GitHub Pages configuration and manual publication
 
-Target: **https://retinazer21.github.io/ProfessorOS/**. This is the intended address, not a claim that hosting is already active. No deployment was performed during preparation.
+Live site: [Professor OS Student Portal](https://retinazer21.github.io/ProfessorOS/).
 
 ## Configuration before publication
 

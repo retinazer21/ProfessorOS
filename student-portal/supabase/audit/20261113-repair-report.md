@@ -17,7 +17,7 @@ The affected history entry was backed up to [20261113-history-before-repair.json
 
 The approved script is [20261113-approved-history-text-repair.sql](20261113-approved-history-text-repair.sql). It uses BEGIN/COMMIT, locks the target row, compares the full row with the backup, rejects unexpected triggers/rules, validates the canonical source against the unchanged recorded checksum, updates exactly one array element, and verifies the row and SHA-256 before COMMIT. Any failed assertion raises an exception and aborts the transaction. All assertions passed; no unexpected discrepancy occurred.
 
-The earlier `PROPOSED_202611130002_repair_history_copy.sql` was NOT executed and is superseded: its audit-table creation exceeds the user's approved scope. It remains only as historical proposal evidence outside the migrations directory.
+An earlier proposal was superseded without execution and archived locally.
 
 ## Independent verification
 

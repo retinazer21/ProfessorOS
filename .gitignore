@@ -102,3 +102,13 @@ secrets.json
 /student-portal/tests/results/*.json
 /student-portal/tests/results/*.png
 /student-portal/screenshots/supabase-*.png
+
+# Local AI tooling, historical captures and release staging
+/.agents/
+/AGENTS.md
+/handoff.md
+/PROJECT_NOTES.md
+/student-portal/screenshots/
+/student-portal/tests/results/
+*.exe
+*.msi
