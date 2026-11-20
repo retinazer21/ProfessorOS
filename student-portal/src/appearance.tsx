@@ -67,10 +67,9 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     return <Context.Provider value={{ pref, update, reduced, error }}><MotionConfig reducedMotion={reduced ? 'always' : 'never'}>{children}</MotionConfig></Context.Provider>;
 }
 
-export function AppearanceGallery() {
+export function AppearanceGallery({ inProfile = false }: { inProfile?: boolean }) {
     const { pref, update, error } = useAppearance();
-    return <details className="appearance-gallery">
-        <summary>Appearance</summary>
+    const controls = <>
         <fieldset><legend>Workspace theme</legend>
             <label className="appearance-option"><input type="radio" name="appearance" checked={pref.theme === 'SYSTEM'} onChange={() => update({ theme: 'SYSTEM' })} /> Follow system appearance</label>
             <div className="theme-grid">{themes.map(t => <label className="theme-sample" key={t.id} style={{ '--sample': t.panel, '--ink': t.text, '--stripe': t.accent, '--rule': t.border, '--chart': t.positive } as CSSProperties}>
@@ -81,5 +80,8 @@ export function AppearanceGallery() {
         <div className="appearance-options"><label>Accent <select value={pref.accent} onChange={e => update({ accent: e.target.value })}><option value="accent">Theme default</option><option value="info">Blue</option><option value="positive">Green</option></select></label>
         <label><input type="checkbox" checked={pref.reduced} onChange={e => update({ reduced: e.target.checked })}/> Reduce motion</label></div>
         {error && <p role="status">Appearance changed for this visit. Browser storage is unavailable.</p>}
-    </details>;
+    </>;
+    return inProfile ? <section className="appearance-gallery" aria-labelledby="appearance-heading">
+        <h2 id="appearance-heading" tabIndex={-1}>Appearance</h2>{controls}
+    </section> : <details className="appearance-gallery"><summary>Appearance</summary>{controls}</details>;
 }

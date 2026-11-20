@@ -12,6 +12,7 @@ import {
     LayoutDashboard,
     LockKeyhole,
     Menu,
+    Palette,
     PanelLeftClose,
     PanelLeftOpen,
     UserRound,
@@ -206,6 +207,11 @@ export function Topbar({
                 <span className="demo-pill">
                     <span /> Fictional demo
                 </span>
+                <a className="appearance-link" href="#/profile/appearance" onClick={() => {
+                    if (location.hash === '#/profile/appearance') document.getElementById('appearance-heading')?.focus();
+                }}>
+                    <Palette size={16} aria-hidden="true" /> Appearance
+                </a>
                 <a
                     className="avatar"
                     href="#/profile"

@@ -36,7 +36,6 @@
     flex: none;
 }
 .studio-shell .sidebar { background: var(--studio-rail); border-color: var(--studio-rule); }
-.studio-shell .brand-icon { background: var(--accent); color: var(--studio-accent); }
 .studio-shell .mobile-nav a.active { background: var(--selected); }
 .studio-shell .mobile-nav a.active { color: var(--studio-accent); }
 .studio-shell :focus-visible { outline-color: var(--studio-accent); }

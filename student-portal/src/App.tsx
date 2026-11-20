@@ -34,9 +34,15 @@ function resetRouteScroll(node: HTMLDivElement | null) {
 export default function App() {
     const requestedRoute = useRoute();
     const { access, error, logout, refresh } = useAuth();
-    const route = ['/login', '/mfa'].includes(requestedRoute) ? '/dashboard' : requestedRoute;
+    const focusAppearance = requestedRoute === '/profile/appearance';
+    const route = focusAppearance ? '/profile' : ['/login', '/mfa'].includes(requestedRoute) ? '/dashboard' : requestedRoute;
     const reduceMotion = useMotionPreference();
     const [menuOpen, setMenuOpen] = useState(false);
+    // Keep only the public navigation mounted while an open workspace rechecks access.
+    const [workspaceOpened, setWorkspaceOpened] = useState(false);
+    useEffect(() => {
+        if (access.stage !== 'loading') setWorkspaceOpened(access.stage === 'ready');
+    }, [access.stage]);
     useEffect(() => {
         const mobile = window.matchMedia("(max-width: 800px)");
         const closeDrawer = () => setMenuOpen(false);
@@ -50,9 +56,9 @@ export default function App() {
             window.removeEventListener("hashchange", closeDrawer);
         };
     }, []);
-    if (access.stage === 'loading') return <div className="auth-page"><div className="auth-center" role="status">Checking secure access…</div></div>;
+    if (access.stage === 'loading' && !workspaceOpened) return <div className="auth-page"><div className="auth-center" role="status">Checking secure access…</div></div>;
     if (access.stage === 'login' || access.stage === 'mfa') return <AuthScreen key={access.stage} mfa={access.stage === 'mfa'} />;
-    if (access.stage !== 'ready') return <div className="auth-page"><div className="auth-center"><h1>Access unavailable</h1><p role="alert">{error || 'Your university has not assigned portal access. Contact your administrator.'}</p><button className="button-secondary" onClick={() => void refresh()}>Retry</button><button className="button-primary" onClick={() => void logout()}>Sign out</button></div></div>;
+    if (access.stage === 'denied') return <div className="auth-page"><div className="auth-center"><h1>Access unavailable</h1><p role="alert">{error || 'Your university has not assigned portal access. Contact your administrator.'}</p><button className="button-secondary" onClick={() => void refresh()}>Retry</button><button className="button-primary" onClick={() => void logout()}>Sign out</button></div></div>;
     const detail = route.startsWith("/courses/")
         ? courses.find((c) => c.id === route.slice("/courses/".length))
         : undefined;
@@ -84,7 +90,7 @@ export default function App() {
                             Published grades are shown separately from these previews.
                         </span>
                     </div>
-                    <AnimatePresence mode="wait">
+                    {access.stage === 'ready' ? <AnimatePresence mode="wait">
                     <motion.div key={route} ref={resetRouteScroll} className="route-view"
                         initial={reduceMotion ? false : { opacity: 0.4, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -104,12 +110,12 @@ export default function App() {
                     ) : route === "/attendance" ? (
                         <Attendance />
                     ) : route === "/profile" ? (
-                        <Profile />
+                        <Profile focusAppearance={focusAppearance} />
                     ) : (
                         <NotFound />
                     )}
                     </motion.div>
-                    </AnimatePresence>
+                    </AnimatePresence> : <p role="status">Checking secure access…</p>}
                 </main>
             </div>
             <nav className="mobile-nav" aria-label="Mobile navigation">

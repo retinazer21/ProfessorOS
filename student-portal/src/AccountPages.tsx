@@ -1,4 +1,5 @@
 import { AppearanceGallery } from './appearance';
+import { useEffect } from 'react';
 import { AuthForm } from './auth/AuthForm';
 import { useAuth } from './auth/AuthProvider';
 import {
@@ -12,16 +13,19 @@ import {
 import { student } from "./demo";
 import { Brand, PageIntro, Panel, SectionHeading } from "./ui";
 
-export function Profile() {
+export function Profile({ focusAppearance }: { focusAppearance: boolean }) {
     const { access, logout } = useAuth();
+    useEffect(() => {
+        if (focusAppearance) document.getElementById('appearance-heading')?.focus();
+    }, [focusAppearance]);
     return (
         <>
             <PageIntro
                 eyebrow="YOUR SPACE"
                 title="Profile & security"
-                description="A preview of the personal and account settings experience."
+                description="Choose your workspace appearance and review your account security."
             />
-            <AppearanceGallery />
+            <AppearanceGallery inProfile />
             <div className="profile-layout">
                 <Panel className="profile-card">
                     <div className="profile-banner">
