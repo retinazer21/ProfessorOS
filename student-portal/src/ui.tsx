@@ -28,7 +28,6 @@ export const nav: { label: string; href: string; icon: LucideIcon }[] = [
     { label: "Grades", href: "#/grades", icon: ChartNoAxesCombined },
     { label: "Attendance", href: "#/attendance", icon: CalendarDays },
     { label: "Profile & security", href: "#/profile", icon: UserRound },
-    { label: "Appearance", href: "#/profile/appearance", icon: Palette },
 ];
 
 export function Brand({ onClick }: { onClick?: () => void } = {}) {
