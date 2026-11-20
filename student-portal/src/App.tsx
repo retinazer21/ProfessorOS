@@ -71,7 +71,7 @@ export default function App() {
                 Skip to content
             </button>
             <Sidebar
-                route={route}
+                route={focusAppearance ? requestedRoute : route}
                 open={menuOpen}
                 close={() => setMenuOpen(false)}
             />

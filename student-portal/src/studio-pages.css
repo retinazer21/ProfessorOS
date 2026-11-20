@@ -132,7 +132,7 @@
 .studio-pages .profile-card { padding: 24px 0 0; border-color: var(--accent); }
 .studio-pages .profile-banner { height: auto; margin: 0; background: transparent; }
 .studio-pages .profile-banner::after { display: none; }
-.studio-pages .profile-avatar { position: static; width: 72px; height: 72px; border: 0; border-radius: 16px; background: var(--accent); color: var(--accent); font-size: 24px; }
+.studio-pages .profile-avatar { position: static; width: 72px; height: 72px; border: 0; border-radius: 16px; background: var(--accent); color: var(--on-accent); font-size: 24px; }
 .studio-pages .profile-card h2 { margin: 20px 0 7px; font-size: 27px; letter-spacing: -.025em; }
 .studio-pages .profile-card > p { font-size: 13px; color: var(--muted); }
 .studio-pages .profile-chip { margin-top: 10px; background: var(--raised); color: var(--accent); font-size: 11px; }

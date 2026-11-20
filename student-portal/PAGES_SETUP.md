@@ -34,7 +34,7 @@ The artifact contains the application HTML, compiled assets and public favicon. 
 
 ## Publication — requires separate approval
 
-After approval, manually run the workflow on `main` with **deploy checked**. The deployment job requires a successful build, uses the `github-pages` environment, and receives only the Pages/OIDC permissions needed to publish. The build job has read-only repository access. No desktop build or installer task is included.
+After approval, choose **Run workflow**, select `main`, and check **deploy**. Before publishing, the deployment job compares the build SHA with the current `main` SHA using read-only repository access. It publishes through the `github-pages` environment with Pages/OIDC permissions. Historical runs retain their original commit and workflow definition. Rerunning a deployment from before the SHA check can restore an obsolete portal.
 
 After publication, verify assets at the target URL, direct opening/reload of hash routes, password-only record denial, TOTP success and rejection, both student identities, refresh, global logout, and replay denial. Use fictional accounts and enter passwords/codes privately. Local build checks do not prove hosted-origin Auth behavior or Supabase dashboard settings. Keep private caches, screenshots containing enrollment QR codes and credentials out of the repository.
 

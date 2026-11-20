@@ -9,8 +9,8 @@ import {
     GraduationCap,
     LockKeyhole,
     ShieldCheck,
+    UserRound,
 } from "lucide-react";
-import { student } from "./demo";
 import { Brand, PageIntro, Panel, SectionHeading } from "./ui";
 
 export function Profile({ focusAppearance }: { focusAppearance: boolean }) {
@@ -29,32 +29,22 @@ export function Profile({ focusAppearance }: { focusAppearance: boolean }) {
             <div className="profile-layout">
                 <Panel className="profile-card">
                     <div className="profile-banner">
-                        <span className="profile-avatar">
-                            {student.initials}
+                        <span className="profile-avatar" aria-hidden="true">
+                            <UserRound size={28} />
                         </span>
                     </div>
-                    <h2>{student.name}</h2>
-                    <p>{student.program}</p>
-                    <span className="profile-chip">{student.year}</span>
+                    <h2>Your account</h2>
                     <div className="profile-divider" />
                     <dl>
                         <div>
-                            <dt>Student ID</dt>
-                            <dd>{student.id}</dd>
-                        </div>
-                        <div>
-                            <dt>University</dt>
-                            <dd>{student.university}</dd>
+                            <dt>Portal role</dt>
+                            <dd className="account-role">{access.role}</dd>
                         </div>
                         <div>
                             <dt>Email</dt>
-                            <dd>{student.email}</dd>
+                            <dd className="account-email">{access.email}</dd>
                         </div>
                     </dl>
-                    <p className="muted-note">
-                        Fictional profile · changes are unavailable in this
-                        visual prototype.
-                    </p>
                 </Panel>
                 <div className="profile-stack">
                     <Panel>
@@ -67,10 +57,8 @@ export function Profile({ focusAppearance }: { focusAppearance: boolean }) {
                                 <LockKeyhole size={19} />
                             </span>
                             <div>
-                                <strong>Sign-in experience</strong>
-                                <p>
-                                    {access.email} · {access.role}
-                                </p>
+                                <strong>University sign-in</strong>
+                                <p>Signed in with your university account.</p>
                             </div>
                             <button className="button-secondary" onClick={() => void logout()}>Sign out</button>
                         </div>

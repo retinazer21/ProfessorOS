@@ -19,7 +19,7 @@ import {
     X,
     type LucideIcon,
 } from "lucide-react";
-import { student, type Course } from "./demo";
+import type { Course } from "./demo";
 import { CourseArtwork } from "./CourseArtwork";
 
 export const nav: { label: string; href: string; icon: LucideIcon }[] = [
@@ -28,6 +28,7 @@ export const nav: { label: string; href: string; icon: LucideIcon }[] = [
     { label: "Grades", href: "#/grades", icon: ChartNoAxesCombined },
     { label: "Attendance", href: "#/attendance", icon: CalendarDays },
     { label: "Profile & security", href: "#/profile", icon: UserRound },
+    { label: "Appearance", href: "#/profile/appearance", icon: Palette },
 ];
 
 export function Brand({ onClick }: { onClick?: () => void } = {}) {
@@ -215,9 +216,9 @@ export function Topbar({
                 <a
                     className="avatar"
                     href="#/profile"
-                    aria-label="Open fictional student profile"
+                    aria-label="Open your profile and security settings"
                 >
-                    {student.initials}
+                    <UserRound size={18} aria-hidden="true" />
                 </a>
             </div>
         </header>
