@@ -46,7 +46,7 @@ class AppearanceSettings(val database:Path, private val scope:CoroutineScope) {
     }
 }
 
-@Composable internal fun SettingsScreen(settings:AppearanceSettings, openTerms:()->Unit) {
+@Composable internal fun SettingsScreen(settings:AppearanceSettings, online:Boolean = false, openTerms:()->Unit) {
     Column(Modifier.fillMaxWidth().testTag("settings-page"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         Panel(Modifier.fillMaxWidth()) {
             Copy("Appearance",20)
@@ -81,13 +81,13 @@ class AppearanceSettings(val database:Path, private val scope:CoroutineScope) {
             settings.error?.let {Copy(it,13,Ink.violet,modifier=Modifier.testTag("settings-error"))}
         }
         Panel(Modifier.fillMaxWidth()) {
-            Copy("Local storage",20)
-            Copy("Your academic workspace stays on this device.",13,Ink.muted)
-            Copy("DATABASE",11,Ink.muted)
+            Copy("Storage",20)
+            Copy(if (online) "Academic records are stored in Supabase. This workspace requires an internet connection." else "This recovery workspace uses the SQLite database on this device.",13,Ink.muted)
+            Copy("SQLITE RECOVERY DATABASE",11,Ink.muted)
             SelectionContainer {Copy(settings.database.toAbsolutePath().normalize().toString(),13,modifier=Modifier.testTag("storage-path"))}
             Copy("APPEARANCE PREFERENCES",11,Ink.muted)
             SelectionContainer {Copy(settings.preferenceFile.toAbsolutePath().normalize().toString(),13)}
-            Copy("Storage is configured at launch with PROFESSOR_OS_DATA_DIR; the default is the data folder. To use another location, close the application, back up your data and set that variable before restarting. This screen does not move or recreate your database.",13,Ink.muted)
+            Copy("The recovery database and appearance preferences are stored on this device. PROFESSOR_OS_DATA_DIR can override their folder at launch.",13,Ink.muted)
         }
         Panel(Modifier.fillMaxWidth()) {
             Copy("Academic organization",20)

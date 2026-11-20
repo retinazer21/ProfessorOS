@@ -26,6 +26,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
     navigate: (String) -> Unit,
     refresh: () -> Unit, selectOffering: (Long) -> Unit,
     embeddedAttendance: Boolean = false,
+    online: Boolean = false,
     sessionActions: (@Composable () -> Unit)? = null,
     featureContent: (@Composable (String) -> Unit)? = null) {
     var picker by remember { mutableStateOf(false) }
@@ -43,7 +44,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
         val narrow = maxWidth < 1120.dp
         val sheetPage = featureContent!=null && page in listOf("Gradebook","Attendance")
         Row(Modifier.fillMaxSize()) {
-            Sidebar(page,compact,navigate,featureContent!=null)
+            Sidebar(page,compact,navigate,featureContent!=null,online)
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 Row(Modifier.fillMaxWidth().height(64.dp).background(Ink.sidebar.copy(alpha=.75f))
                     .padding(horizontal=24.dp), verticalAlignment=Alignment.CenterVertically,
@@ -73,7 +74,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
                         verticalArrangement=Arrangement.spacedBy(if(sheetPage)8.dp else 24.dp)) {
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.SpaceBetween) {
                             Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                                if(!sheetPage) Copy(snapshot?.overview?.asOf()?.format(DateTimeFormatter.ofPattern("EEEE, d MMMM")) ?: "Local workspace",12,Ink.muted)
+                                if(!sheetPage) Copy(snapshot?.overview?.asOf()?.format(DateTimeFormatter.ofPattern("EEEE, d MMMM")) ?: if (online) "Online workspace" else "Recovery workspace",12,Ink.muted)
                                 Copy(when(page) {"Teaching context" -> "Your teaching context";"Activity" -> "Your academic week";"Overview" -> "Your workspace";else -> page},if(sheetPage)20 else 28,weight=FontWeight.SemiBold)
                             }
                             if(!compact && !sheetPage) Copy("مساحتك الأكاديمية",16,Ink.muted,modifier=Modifier.testTag("arabic-welcome"))
@@ -111,7 +112,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
                             }
                         }
                         if(!sheetPage) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                            Copy("Saved locally · available offline",11,Ink.muted)
+                            Copy(if (online) "Academic records stored in Supabase" else "SQLite recovery workspace · available offline",11,Ink.muted)
                             Copy("Professor OS",11,Ink.muted)
                         }
                     }
@@ -121,7 +122,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
     }
 }
 
-@Composable private fun Sidebar(page:String,compact:Boolean,navigate:(String)->Unit,features:Boolean=false) {
+@Composable private fun Sidebar(page:String,compact:Boolean,navigate:(String)->Unit,features:Boolean,online:Boolean) {
     val destinations=if(features)workspaceDestinations else destinations
     val rowHeight = 38.dp
     val rowSpacing = 6.dp
@@ -151,7 +152,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
         }
         if(!compact) Row(Modifier.padding(start=10.dp,bottom=18.dp),horizontalArrangement=Arrangement.spacedBy(7.dp),
             verticalAlignment=Alignment.CenterVertically) {
-            Box(Modifier.size(5.dp).background(Ink.positive,RoundedCornerShape(3.dp)));Copy("On your device",11,Ink.muted)
+            Box(Modifier.size(5.dp).background(Ink.positive,RoundedCornerShape(3.dp)));Copy(if (online) "Supabase workspace" else "On your device",11,Ink.muted)
         } else Spacer(Modifier.height(4.dp))
     }
 }

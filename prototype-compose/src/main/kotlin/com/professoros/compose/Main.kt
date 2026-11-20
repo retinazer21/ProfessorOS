@@ -7,7 +7,10 @@ import androidx.compose.ui.res.painterResource
 import com.professoros.app.AppPaths
 import androidx.compose.foundation.isSystemInDarkTheme
 
-fun main() = onlineDesktop()
+fun main(args: Array<String>) {
+    if (args.contentEquals(arrayOf("--recovery"))) recoveryDesktop()
+    else onlineDesktop()
+}
 
 object RecoveryDesktopLauncher {
     @JvmStatic fun main(args: Array<String>) = recoveryDesktop()
@@ -49,7 +52,7 @@ private fun recoveryDesktop() = application {
 @Composable
 internal fun AcademicScreen(destination: String, workspace: WorkspaceController, preferences: AppearanceSettings, navigate: (String)->Unit) {
     when(destination) {
-        "Settings" -> SettingsScreen(preferences) { workspace.guard { navigate("Terms") } }
+        "Settings" -> SettingsScreen(preferences, online = workspace.services.readOnlyCloud) { workspace.guard { navigate("Terms") } }
         "Teaching context" -> RosterScreen(workspace)
         "Lectures" -> LectureScreen(workspace)
         "Question Bank" -> QuestionScreen(workspace)

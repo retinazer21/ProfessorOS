@@ -62,7 +62,7 @@ import com.professoros.model.*
                 RecordTable(c.catalog.offerings.filter {(it.label()+it.courseName()).contains(query,true)},listOf(TableColumn("Course",1.5f){it:OfferingSummary->it.courseCode()+" — "+it.courseName()},TableColumn("Term",1.5f){it.termName()+" "+it.academicYear()},TableColumn("Section"){it.offering().section()},TableColumn("Status"){it.offering().status().toString()}),{it.offering().id()},selected,{selected=it.offering().id()},{selectOffering(it.offering().id())},"offerings-table")
             }
         }
-        Copy("${if(c.busy)"Working…" else "Saved locally"} · Select a row for actions; Enter opens it.",12,Ink.muted)
+        Copy("${if(c.busy)"Working…" else if(c.services.readOnlyCloud) "Supabase records" else "SQLite recovery records"} · Select a row for actions; Enter opens it.",12,Ink.muted)
         c.error?.let {Copy(it,13,Ink.violet)}
     }
 }

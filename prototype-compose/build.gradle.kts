@@ -29,16 +29,27 @@ dependencies {
     // Verify generated files with the same POI/PDFBox versions already packaged by Maven.
     testImplementation(fileTree("../target/compose-libs") { include("*.jar") }.builtBy(backend))
 }
+val desktopPackageName = "Professor OS"
+val desktopPackageVersion = "1.1.0"
+val desktopPackageDescription = "Online academic workspace for university professors with SQLite recovery"
+val desktopUpgradeUuid = "b5680b84-3e0b-4a04-9550-8745858157d9"
+val releaseOrigin = providers.environmentVariable("PROFESSOR_OS_RELEASE_SUPABASE_URL").orNull
+val releaseKey = providers.environmentVariable("PROFESSOR_OS_RELEASE_SUPABASE_PUBLISHABLE_KEY").orNull
+val validReleaseConfiguration = releaseOrigin?.matches(Regex("https://[a-z0-9]{20}\\.supabase\\.co")) == true &&
+    releaseKey?.matches(Regex("sb_publishable_[A-Za-z0-9_-]+")) == true
 compose.desktop {
     application {
         mainClass = "com.professoros.compose.MainKt"
         jvmArgs += listOf("--enable-native-access=ALL-UNNAMED", "-Dprofessoros.packaged=true")
+        if (validReleaseConfiguration) {
+            jvmArgs += listOf("-Dprofessoros.supabase.url=$releaseOrigin", "-Dprofessoros.supabase.publishableKey=$releaseKey")
+        }
         nativeDistributions {
             targetFormats(TargetFormat.Exe)
-            packageName = "Professor OS"
-            packageVersion = "1.0.1"
-            description = "Offline academic workspace for university professors"
-            vendor = "Professor OS"
+            packageName = desktopPackageName
+            packageVersion = desktopPackageVersion
+            description = desktopPackageDescription
+            vendor = desktopPackageName
             // POI/PDFBox/JDBC use services and reflection: prefer a complete runtime to a fragile module guess.
             includeAllModules = true
             windows {
@@ -49,7 +60,7 @@ compose.desktop {
                 menu = true
                 menuGroup = "Professor OS"
                 // Stable application identity for future upgrades. Never regenerate this UUID.
-                upgradeUuid = "b5680b84-3e0b-4a04-9550-8745858157d9"
+                upgradeUuid = desktopUpgradeUuid
             }
         }
     }
@@ -69,6 +80,41 @@ tasks.withType<JavaExec>().configureEach {
 // Only native launchers select installed-user storage; Gradle development runs retain data/.
 tasks.withType<AbstractJPackageTask>().configureEach {
     providers.gradleProperty("wixToolsetDir").orNull?.let { wixToolsetDir.set(file(it)) }
+    doFirst {
+        check(name != "packageExe") { "Use tools/package-windows.ps1 to build the installer with session preservation." }
+        check(validReleaseConfiguration) {
+            "Set the release Supabase HTTPS project URL and its sb_publishable_ key before packaging."
+        }
+    }
+}
+
+tasks.register<Exec>("packageWindowsRelease") {
+    group = "distribution"
+    description = "Build the Windows installer with legacy encrypted-session preservation"
+    dependsOn("createDistributable")
+    val releaseJdk = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) }
+    val image = layout.buildDirectory.dir("compose/binaries/main/app/$desktopPackageName")
+    val destination = layout.buildDirectory.dir("compose/binaries/main/exe")
+    doFirst {
+        val resources = providers.gradleProperty("windowsInstallerResources").get()
+        val wix = providers.gradleProperty("wixToolsetDir").get()
+        val launcher = image.get().file("app/$desktopPackageName.cfg").asFile.readLines()
+        check(validReleaseConfiguration && "java-options=-Dprofessoros.supabase.url=$releaseOrigin" in launcher &&
+            "java-options=-Dprofessoros.supabase.publishableKey=$releaseKey" in launcher) {
+            "The app image is missing the configured public Supabase settings."
+        }
+        environment("PATH", "$wix;${System.getenv("PATH")}")
+        commandLine(
+            releaseJdk.get().metadata.installationPath.file("bin/jpackage.exe").asFile,
+            "--type", "exe", "--app-image", image.get().asFile,
+            "--dest", destination.get().asFile, "--resource-dir", resources,
+            "--name", desktopPackageName, "--app-version", desktopPackageVersion,
+            "--description", desktopPackageDescription, "--vendor", desktopPackageName,
+            "--win-upgrade-uuid", desktopUpgradeUuid, "--win-per-user-install",
+            "--win-dir-chooser", "--win-shortcut", "--win-menu", "--win-menu-group", desktopPackageName,
+            "--icon", file("src/main/resources/icons/professor-os.ico")
+        )
+    }
 }
 
 tasks.register<JavaExec>("runOnline") {

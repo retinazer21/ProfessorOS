@@ -44,7 +44,7 @@ internal fun OnlineAcademicWorkspace(client: PortalPublishingClient, settings: A
         val model = projection
         if (model == null && page == "Attendance") {
             ProfessorDashboard(null,attendance.busy,null,page,{ page=it },{ attendanceRefresh++ },{},
-                embeddedAttendance=true,sessionActions={ Action("Sign out",quiet=true,enabled=!attendance.busy,onClick=logout) }) {
+                embeddedAttendance=true, online=true,sessionActions={ Action("Sign out",quiet=true,enabled=!attendance.busy,onClick=logout) }) {
                 OnlineAttendance(client,drafts,stateChanged,logout,attendance,attendanceRefresh,embedded=true,scope=attendanceScope)
             }
             return@Column
@@ -76,7 +76,7 @@ internal fun OnlineAcademicWorkspace(client: PortalPublishingClient, settings: A
             {next -> if(!attendance.busy) workspace.guard {page=next} },
             { if(page=="Attendance") attendanceRefresh++ else workspace.guard {workspace.refresh()} },
             {id -> workspace.select(id) {page="Teaching context"}},
-            embeddedAttendance=true,
+            embeddedAttendance=true, online=true,
             sessionActions={ Action("Sign out",quiet=true,enabled=!workspace.busy&&!attendance.busy) {workspace.guard {logout()}} },
             featureContent={destination ->
                 if(destination=="Attendance")

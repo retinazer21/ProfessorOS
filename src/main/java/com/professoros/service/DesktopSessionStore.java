@@ -22,7 +22,7 @@ public final class DesktopSessionStore implements PortalPublishingClient.Refresh
         String profile = System.getenv("LOCALAPPDATA");
         if (profile == null || profile.isBlank()) throw new IOException("Windows session storage is unavailable.");
         var digest = MessageDigest.getInstance("SHA-256").digest(origin.getBytes(StandardCharsets.UTF_8));
-        return new DesktopSessionStore(Path.of(profile,"Professor OS","sessions"), HexFormat.of().formatHex(digest));
+        return new DesktopSessionStore(Path.of(profile,"ProfessorOS","sessions"), HexFormat.of().formatHex(digest));
     }
 
     DesktopSessionStore(Path directory, String project) throws IOException {

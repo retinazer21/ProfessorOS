@@ -50,7 +50,7 @@ import java.nio.file.Path
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
             Copy(c.active?.label().orEmpty(),12,Ink.violet,modifier=Modifier.weight(1f).padding(end=12.dp),lines=1)
             Copy(GradeCalculator.configurationMessage(book),12,Ink.violet,modifier=Modifier.padding(end=12.dp).testTag("grade-weights"))
-            Copy(if(editor.dirty)"● Unsaved changes" else "Saved locally",12,if(editor.dirty)Ink.violet else Ink.muted,modifier=Modifier.testTag("grade-save-state"))
+            Copy(if(editor.dirty)"● Unsaved changes" else if (c.services.readOnlyCloud) "No unsaved changes" else "Saved locally",12,if(editor.dirty)Ink.violet else Ink.muted,modifier=Modifier.testTag("grade-save-state"))
         }
         Toolbar {
             listOf("Grades","Assessments","Categories & scale").forEach {name->Action(name,if(tab==name)"check" else "arrow",modifier=Modifier.testTag("grade-tab-$name")){tab=name}}

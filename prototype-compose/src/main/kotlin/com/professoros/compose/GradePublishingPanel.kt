@@ -29,7 +29,7 @@ private data class PublicationReview(
     var review by remember { mutableStateOf<PublicationReview?>(null) }
     val scope = rememberCoroutineScope()
     val client = remember {
-        lazy { existingSession ?: PortalPublishingClient(System.getenv("PROFESSOR_OS_SUPABASE_URL"), System.getenv("PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY")) }
+        lazy { existingSession ?: DesktopConnection.client() }
     }
     fun signOut() {
         if (existingSession == null && client.isInitialized()) {

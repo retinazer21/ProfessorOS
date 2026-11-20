@@ -32,8 +32,8 @@ fun onlineDesktop() = application {
     val height = System.getProperty("professoros.preview.height")?.toIntOrNull()?.coerceIn(660,2160) ?: 860
     var draftOwner by remember {mutableStateOf<java.util.UUID?>(null)}
     var exitAfterDiscard by remember { mutableStateOf<Boolean?>(null) }
-    val origin = System.getenv("PROFESSOR_OS_SUPABASE_URL")
-    fun newClient() = PortalPublishingClient(origin,System.getenv("PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY"))
+    val origin = DesktopConnection.origin
+    fun newClient() = DesktopConnection.client()
     suspend fun restore() {
         busy=true
         try {
