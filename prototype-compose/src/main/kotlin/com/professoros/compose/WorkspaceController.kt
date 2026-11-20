@@ -180,14 +180,14 @@ class WorkspaceController(val services: WorkspaceServices, private val scope: Co
     }
     fun chooseAttendanceLecture(id:Long) {
         if(busy || attendance?.lectureId==id)return
-        guard {attendance?.select(id);attendanceLectureId=id}
+        attendance?.select(id);attendanceLectureId=id
     }
     fun saveAttendance() {
         val editor=attendance?:return
         val lecture=editor.lectureId?:return
-        if(!editor.dirty||editor.readOnly)return
+        if(!editor.dirty)return
         val entries=editor.changes()
-        mutate(committed={attendanceLectureId=lecture;attendance=null}) {services.academic.attendance().save(editor.book.offeringId(),lecture,entries)}
+        mutate(committed={attendanceLectureId=lecture;attendance=null}) {services.academic.attendance().saveSheet(editor.book.offeringId(),entries)}
     }
     fun confirm(title: String, message: String, action: () -> Unit) { if(!busy) confirmation=Confirmation(title,message,action) }
     fun inspect(title: String, operation: () -> String) = task(operation) { detail=Detail(title,it) }

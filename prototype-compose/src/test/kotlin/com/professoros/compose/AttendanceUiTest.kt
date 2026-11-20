@@ -75,26 +75,29 @@ class AttendanceUiTest {
         assertEquals(1,reopened.academic.attendance().load(id).records().count {it.enrollmentId()==first && it.lectureId()==lecture})
     }
 
-    @Test fun bulkIncludesHiddenRowsGuardsAndCancelledSessionValidation()=runSkikoComposeUiTest(size=Size(1200f,950f)) {
+    @Test fun bulkFillsOnlyVisibleBlanksAndRetainsDraftAcrossLectures()=runSkikoComposeUiTest(size=Size(1200f,950f)) {
         val (services,id)=fixture();lateinit var c:WorkspaceController
+        val baseline=services.academic.attendance().load(id)
+        val visible=baseline.students().single {it.student().studentNumber()=="0001"}.enrollment().id()
+        services.academic.attendance().save(id,baseline.lectures().first().id(),mapOf(visible to null))
         setContent {val scope=rememberCoroutineScope();c=remember {WorkspaceController(services,scope)};LaunchedEffect(Unit){c.select(id)}
             Box(Modifier.fillMaxSize()){AttendanceScreen(c);WorkspaceOverlays(c)}}
         settled(c);val book=c.attendance!!.book;val lectures=book.lectures();val first=book.students().single {it.student().studentNumber()=="0001"}.enrollment().id()
         onNodeWithTag("attendance-search").performTextInput("0001")
-        onNodeWithTag("bulk-attendance").performClick();assertContains(c.confirmation!!.message,"including hidden and withdrawn")
+        onNodeWithTag("bulk-attendance").performClick();assertContains(c.confirmation!!.message,"visible unmarked")
         onNodeWithTag("cancel-confirm").performClick();assertFalse(c.attendance!!.dirty)
         onNodeWithTag("bulk-attendance").performClick();onNodeWithTag("confirm").performClick()
-        assertTrue(book.students().all {c.attendance!!.value(it.enrollment().id())==AttendanceStatus.PRESENT})
+        assertEquals(AttendanceStatus.PRESENT,c.attendance!!.value(first))
+        assertTrue(book.students().filter {it.enrollment().id()!=first}.all {c.attendance!!.value(it.enrollment().id())==AttendanceStatus.ABSENT})
         onNodeWithTag("attendance-lecture").performClick();onNodeWithTag("attendance-lecture-${lectures[1].id()}").performClick()
-        onNodeWithTag("cancel-confirm").performClick();assertEquals(lectures[0].id(),c.attendance!!.lectureId);assertTrue(c.attendance!!.dirty)
+        assertEquals(lectures[1].id(),c.attendance!!.lectureId);assertTrue(c.attendance!!.dirty)
+        runOnIdle { c.chooseAttendanceLecture(lectures[0].id()) }
         var left=false;runOnIdle {c.guard {left=true}};onNodeWithTag("cancel-confirm").performClick();assertFalse(left)
         runOnIdle {c.select(null)};onNodeWithTag("cancel-confirm").performClick();assertEquals(id,c.offeringId)
         onNodeWithTag("save-attendance").performClick();settled(c)
-        assertTrue(c.attendance!!.book.students().all {c.attendance!!.book.status(it.enrollment().id(),lectures[0].id())==AttendanceStatus.PRESENT})
-        onNodeWithTag("attendance-bulk-status").performClick();onNodeWithTag("attendance-bulk-status-UNMARKED").performClick()
         onNodeWithTag("bulk-attendance").performClick();onNodeWithTag("confirm").performClick()
-        onNodeWithTag("save-attendance").performClick();settled(c)
-        assertTrue(c.attendance!!.book.records().none {it.lectureId()==lectures[0].id()})
+        assertFalse(c.attendance!!.dirty)
+        assertEquals(AttendanceStatus.PRESENT,c.attendance!!.book.status(first,lectures[0].id()))
         // The current session stays selected after save and clear.
         assertEquals(lectures[0].id(),c.attendance!!.lectureId)
         runOnIdle {c.chooseAttendanceLecture(lectures[2].id())}

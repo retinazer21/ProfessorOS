@@ -21,6 +21,8 @@ An offline-first academic workspace for university professors, with a separate S
 
 Desktop Settings and the portal’s Appearance gallery share ten workspace themes. Choose a theme or follow the system, adjust the accent, and reduce motion. Each device or browser keeps its own preference.
 
+An online desktop attendance register is available through the development launcher. The regular desktop still uses SQLite. See the [online desktop setup and migration status](docs/DESKTOP_ONLINE_MIGRATION.md).
+
 ## Screenshots
 
 ### Student Portal — desktop

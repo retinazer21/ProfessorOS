@@ -36,15 +36,37 @@ import kotlinx.coroutines.launch
     var selected by remember(editor.book.offeringId()) {mutableStateOf<Long?>(null)}
     var bulk by remember {mutableStateOf("PRESENT")}
     var sort by remember {mutableStateOf("number")}
+    var matrix by remember {mutableStateOf(false)}
+    var contexts by remember {mutableStateOf(false)}
     val book=editor.book
-    val savedSummary=remember(book) {AttendanceCalculator.course(book).display()}
     val row=book.students().find {it.enrollment().id()==selected}
+    val rows=book.students().filter {("${it.student().studentNumber()} ${it.student().fullName()}").contains(query.trim(),true)}
+        .sortedBy {if(sort=="name")it.student().fullName().lowercase() else it.student().studentNumber()}
     Column(Modifier.fillMaxSize().onPreviewKeyEvent {
         if(it.type==KeyEventType.KeyDown && (it.isCtrlPressed||it.isMetaPressed) && it.key==Key.S){c.saveAttendance();true}else false
     },verticalArrangement=Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             Copy(c.active?.label().orEmpty(),12,Ink.violet,modifier=Modifier.weight(1f),lines=1)
             Copy(if(editor.dirty)"● Unsaved changes" else "Saved locally",12,if(editor.dirty)Ink.violet else Ink.muted,modifier=Modifier.testTag("attendance-save-state"))
+        }
+        Toolbar {
+            Action("Lecture view","lecture",active=!matrix){matrix=false}
+            Action("Matrix view","grid",active=matrix){matrix=true}
+            Action("Teaching context","chevrons",active=contexts){contexts=!contexts}
+        }
+        val active=c.active
+        if(contexts && active!=null) {
+            val items=c.catalog.offerings
+            val term=active.offering().academicTermId()
+            val course=active.offering().courseId()
+            val scope=items.filter {it.offering().academicTermId()==term}
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f)){Select("Term",term.toString(),items.distinctBy {it.offering().academicTermId()}.map {Choice(it.offering().academicTermId().toString(),it.termName()+" "+it.academicYear())},
+                    {v->c.select(items.first {it.offering().academicTermId().toString()==v}.offering().id())})}
+                Column(Modifier.weight(1f)){Select("Course",course.toString(),scope.distinctBy {it.offering().courseId()}.map {Choice(it.offering().courseId().toString(),it.courseCode())},
+                    {v->c.select(scope.first {it.offering().courseId().toString()==v}.offering().id())})}
+                Column(Modifier.weight(1f)){Select("Offering",active.offering().id().toString(),scope.filter {it.offering().courseId()==course}.map {Choice(it.offering().id().toString(),it.offering().section())},{c.select(it.toLong())})}
+            }
         }
         if(book.lectures().isEmpty()) Panel(Modifier.fillMaxWidth()) {
             Copy("No attendance sessions yet",18,weight=FontWeight.SemiBold)
@@ -58,15 +80,15 @@ import kotlinx.coroutines.launch
                 }
                 Column(Modifier.weight(1f)) {
                     CompositionLocalProvider(LocalControlsEnabled provides (!c.busy&&!editor.readOnly)) {
-                        Select("Bulk · entire roster",bulk,attendanceChoices.map {Choice(it?.name?:"UNMARKED",attendanceLabel(it))},{bulk=it},"attendance-bulk-status")
+                        Select("Bulk status",bulk,AttendanceStatus.entries.map {Choice(it.name,attendanceLabel(it))},{bulk=it},"attendance-bulk-status")
                     }
                 }
-                Action("Mark roster","people",variant=ActionVariant.PRIMARY,enabled=!editor.readOnly&&!c.busy&&book.students().isNotEmpty(),modifier=Modifier.testTag("bulk-attendance")) {
-                    c.markAttendanceRoster(if(bulk=="UNMARKED")null else AttendanceStatus.valueOf(bulk))
+                Action("Fill visible blanks","people",enabled=!editor.readOnly&&!c.busy&&rows.isNotEmpty(),modifier=Modifier.testTag("bulk-attendance")) {
+                    c.markAttendanceRoster(AttendanceStatus.valueOf(bulk),rows)
                 }
             }
             Toolbar {
-                Action("Save attendance","check",variant=ActionVariant.SUCCESS,enabled=editor.dirty&&!editor.readOnly&&!c.busy,modifier=Modifier.testTag("save-attendance"),onClick=c::saveAttendance)
+                Action("Save attendance","check",variant=ActionVariant.SUCCESS,enabled=editor.dirty&&!c.busy,modifier=Modifier.testTag("save-attendance"),onClick=c::saveAttendance)
                 Action("Export to Excel",enabled=!c.busy,modifier=Modifier.testTag("export-attendance")){c.exportGradeWorkbook()}
                 Action("Discard / reload",variant=ActionVariant.WARNING,enabled=!c.busy,modifier=Modifier.testTag("reload-attendance")){c.guard {c.refresh()}}
                 Action("Policy", "question") { c.detail=Detail("Attendance policy",AttendanceCalculator.POLICY+"\nWithdrawn enrollments excluded. Save changes to update percentages and history.") }
@@ -77,11 +99,15 @@ import kotlinx.coroutines.launch
                 Input("Search student number or name",query,{query=it},Modifier.weight(2f),tag="attendance-search")
                 Column(Modifier.weight(1f)){Select("Sort roster",sort,listOf(Choice("number","Student number"),Choice("name","Student name")),{sort=it})}
             }
-            Copy(savedSummary,12,Ink.violet,modifier=Modifier.testTag("attendance-summary"),lines=1)
+            val totals=book.students().groupingBy {editor.value(it.enrollment().id())}.eachCount()
+            Copy(attendanceChoices.joinToString(" · "){"${totals[it]?:0} ${attendanceLabel(it)}"},12,Ink.text,modifier=Modifier.testTag("attendance-summary"),lines=1)
             Copy("P Present · A Absent · L Late · E Excused · U Unmarked · ↑ ↓ move students · Ctrl+S saves",12,Ink.muted)
-            val rows=book.students().filter {("${it.student().studentNumber()} ${it.student().fullName()}").contains(query.trim(),true)}
-                .sortedBy {if(sort=="name")it.student().fullName().lowercase() else it.student().studentNumber()}
-            AttendanceRoster(editor,rows,selected,{selected=it},!c.busy,Modifier.weight(1f))
+            if(matrix) {
+                val byId=remember(editor){editor.sheet.sheet.students().associateBy {it.id().leastSignificantBits}}
+                RegisterGrid(editor.sheet,rows.map {byId.getValue(it.enrollment().id())},editor.sheet.sheet.lectures(),true,c.busy,Modifier.weight(1f)) {
+                    c.chooseAttendanceLecture(it.leastSignificantBits);matrix=false
+                }
+            } else AttendanceRoster(editor,rows,selected,{selected=it},!c.busy,Modifier.weight(1f))
         }
         c.error?.let {Copy(it,13,Ink.violet,modifier=Modifier.testTag("attendance-error"))}
     }
@@ -129,14 +155,14 @@ import kotlinx.coroutines.launch
                                 attendanceChoices.forEach {status->
                                     Box(Modifier.weight(1f).heightIn(min=36.dp).background(if(value==status)Ink.accentSurface else Ink.background,RoundedCornerShape(6.dp))
                                         .border(1.dp,if(value==status)Ink.violet else Ink.border,RoundedCornerShape(6.dp))
-                                        .selectable(selected=value==status,enabled=enabled&&!editor.readOnly,role=Role.RadioButton){select(id);editor.set(id,status)}
+                                    .selectable(selected=value==status,enabled=enabled&&!editor.readOnly&&row.enrollment().status()!=EnrollmentStatus.WITHDRAWN,role=Role.RadioButton){select(id);editor.set(id,status)}
                                         .testTag("attendance-$id-${status?.name?:"UNMARKED"}").semantics {contentDescription="${row.student().fullName()}: ${attendanceLabel(status)}"}
                                         .padding(horizontal=4.dp,vertical=9.dp),contentAlignment=Alignment.Center) {
                                         Copy(attendanceLabel(status),11,if(value==status)Ink.violet else Ink.muted,lines=1)
                                     }
                                 }
                             }
-                            Copy(saved[id]?.percentage()?.let {PercentageFormatter.format(it)}?:"Not rated",12,Ink.muted,modifier=Modifier.width(74.dp).testTag("attendance-percent-$id"))
+                            Copy(saved[id]?.percentage()?.let {PercentageFormatter.format(it)}?:"Not rated",12,Ink.muted,modifier=Modifier.width(74.dp).padding(start=8.dp).testTag("attendance-percent-$id"))
                         }
                     }
                   }

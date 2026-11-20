@@ -70,3 +70,26 @@ tasks.withType<JavaExec>().configureEach {
 tasks.withType<AbstractJPackageTask>().configureEach {
     providers.gradleProperty("wixToolsetDir").orNull?.let { wixToolsetDir.set(file(it)) }
 }
+
+tasks.register<JavaExec>("runOnline") {
+    group = "application"
+    description = "Open the authenticated Supabase desktop during staged cutover"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("com.professoros.compose.OnlineDesktopLauncher")
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+// Launch Java directly in a terminal so the opt-in live check can read its password without echo.
+tasks.register("prepareAttendanceReadCheck") {
+    group = "verification"
+    description = "Prepare the interactive, read-only hosted attendance check"
+    dependsOn(tasks.testClasses)
+    val argsFile = layout.buildDirectory.file("attendance-read-check.args")
+    val runtime = sourceSets.test.get().runtimeClasspath
+    inputs.files(runtime)
+    outputs.file(argsFile)
+    doLast {
+        val classpath = runtime.asPath.replace('\\', '/')
+        argsFile.get().asFile.writeText("--enable-native-access=ALL-UNNAMED\n-classpath\n\"$classpath\"\ncom.professoros.compose.LiveAttendanceReadCheck\n")
+    }
+}

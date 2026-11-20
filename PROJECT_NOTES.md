@@ -1009,3 +1009,11 @@ Both clients read the ten palettes from `src/main/resources/appearance.tsv`. Com
 ## Fictional desktop academic import
 
 The administrator imports a verified SQLite snapshot into a private PostgreSQL roster schema. Stable UUIDs preserve local relationships independently of Auth. Explicit bindings project active enrollments into the original access and publishing tables. Read functions enforce the existing session, MFA and assignment checks. The portal reads these projections for courses, lectures and attendance. Desktop drafts and exam material stay local. See [the import runbook](docs/ACADEMIC_IMPORT.md).
+
+## Desktop online migration
+
+Desktop attendance has linked Lecture and Matrix views. The online editor keys drafts by offering, enrollment and lecture UUID and preserves the expected value until confirmation. Bulk fill skips stored marks, pending clears and hidden rows. The SQLite register uses the same matrix and applies changed cells in one checked transaction. Hosted migration `202611200006` adds the full roster and atomic batch save to the online launcher. It was applied independently of the private workspace migrations `202611200004` and `202611200005`.
+
+Hosted migration `202611200007` uses `PT409` for a stale expected mark. The desktop retains the pending edits and requires a refresh before saving again. The hosted test recorded one HTTP 409 and one database rejection for the two-cell save. The student saw the valid attendance change and its restoration. All 840 original marks and the existing access policies matched the recovery snapshot afterward.
+
+The first cloud writer updates an existing attendance mark in an assigned offering after the professor completes TOTP. It checks the previously read status in the database transaction. The separate online development launcher keeps the local installation available during staged verification. The backup inventory, remaining workflows and private-data backfill are recorded in the [desktop migration plan](docs/DESKTOP_ONLINE_MIGRATION.md).

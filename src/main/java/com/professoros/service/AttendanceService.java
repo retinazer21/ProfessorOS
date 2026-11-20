@@ -24,5 +24,9 @@ public final class AttendanceService {
         for(Long id:copy.keySet()) if(id==null || enrollments.findById(id).filter(e->e.courseOfferingId()==offering).isEmpty()) throw new DomainValidationException("Every student must be enrolled in the lecture's offering. Refresh the roster.");
         repository.save(offering,lecture,copy,Instant.now());
     }
+    public void saveSheet(long offering,List<AttendanceCellEdit> edits) {
+        requireOffering(offering);
+        repository.saveSheet(offering,List.copyOf(edits),Instant.now());
+    }
     private void requireOffering(long offering) { if(offerings.findById(offering).isEmpty()) throw new DomainValidationException("Course offering no longer exists. Refresh and select an offering."); }
 }

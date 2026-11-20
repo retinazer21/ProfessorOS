@@ -66,6 +66,64 @@ try {
             await db.exec('reset role');
         }
     }
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200003_desktop_attendance.sql','utf8'));
+    const sample = data.attendance.find(m => data.enrollment.some(e=>e.id===m.enrollment_id && e.student_id===data.account_link[0].student_id));
+    const updated = sample.status === 'LATE' ? 'PRESENT' : 'LATE';
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200006_attendance_sheet.sql','utf8'));
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200007_attendance_conflict.sql','utf8'));
+    const sheet = () => db.query('select public.desktop_attendance_sheet($1) as sheet',[sample.offering_id]);
+    const edit = (mark,expected,desired)=>({enrollment:mark.enrollment_id,lecture:mark.lecture_id,expected,desired});
+    const save = edits => db.query('select public.desktop_save_attendance_sheet($1,$2) as count',
+        [sample.offering_id,JSON.stringify(edits)]);
+    const clear = edit(sample,sample.status,null);
+    const professor = fn => as(bindings.professor,'aal2',fn);
+    for(const [id,aal] of [[bindings.professor,'aal1'],[outsider,'aal2'],[bindings.students[0].user_id,'aal2']]) {
+        await assert.rejects(as(id,aal,sheet),/assignment required/);
+        await assert.rejects(as(id,aal,()=>save([clear])),/assignment required/);
+    }
+    const readSheet = async () => (await professor(sheet)).rows[0].sheet;
+    const restored = await readSheet();
+    // PostgreSQL processes the cells in UUID order. The first update must roll back
+    // when the second expected mark is stale, even if the caller lists them in reverse.
+    const [first, second] = data.attendance.filter(m => m.enrollment_id === sample.enrollment_id)
+        .sort((a,b) => a.lecture_id.localeCompare(b.lecture_id));
+    const alternate = status => status === 'EXCUSED' ? 'LATE' : 'EXCUSED';
+    const stale = ['ABSENT', 'PRESENT', 'LATE'].find(s => s !== second.status && s !== alternate(second.status));
+    await assert.rejects(professor(() => save([
+        edit(second, stale, alternate(second.status)), edit(first, first.status, alternate(first.status))
+    ])), {code:'PT409'});
+    const byCell = marks => marks.toSorted((a,b) =>
+        a.enrollment.localeCompare(b.enrollment) || a.lecture.localeCompare(b.lecture));
+    assert.deepEqual(byCell((await readSheet()).marks), byCell(restored.marks));
+    assert.equal(restored.students.length,data.enrollment.filter(e=>e.offering_id===sample.offering_id).length);
+    assert.equal((await professor(()=>save([clear]))).rows[0].count,1);
+    const blank = await readSheet();
+    assert.deepEqual(blank.students,restored.students);
+    assert.equal(blank.marks.length,restored.marks.length-1);
+    assert.ok(!blank.marks.some(m=>m.enrollment===clear.enrollment && m.lecture===clear.lecture));
+    const otherCell = data.attendance.find(m=>m.offering_id===sample.offering_id && m.enrollment_id!==sample.enrollment_id);
+    const otherEdit = edit(otherCell,otherCell.status,otherCell.status==='LATE'?'PRESENT':'LATE');
+    await assert.rejects(professor(()=>save([otherEdit,clear])),/Attendance changed/);
+    assert.deepEqual((await readSheet()).marks,blank.marks);
+    await professor(()=>save([edit(sample,null,sample.status)]));
+    await assert.rejects(professor(()=>save([edit(sample,null,updated)])),/Attendance changed/);
+    const outside=data.attendance.find(m=>m.offering_id!==sample.offering_id);
+    await assert.rejects(professor(()=>save([edit(outside,outside.status,null)])),/Cell unavailable/);
+    assert.equal((await readSheet()).marks.length,restored.marks.length);
+    console.log('PASS: scoped roster, explicit clears, unmarked insert, MFA, ownership, conflict and atomic batch rollback');
+    const change = (expected,next)=>db.query('select public.desktop_change_attendance($1,$2,$3,$4) as status',
+        [sample.enrollment_id,sample.lecture_id,expected,next]);
+    const write = ()=>change(sample.status,updated);
+    await assert.rejects(as(bindings.professor,'aal1',write),/verification required/);
+    await assert.rejects(as(data.account_link[0].user_id,'aal2',write),/verification required/);
+    await assert.rejects(as(outsider,'aal2',write),/unavailable or changed/);
+    assert.equal((await as(bindings.professor,'aal2',write)).rows[0].status,updated);
+    await assert.rejects(as(bindings.professor,'aal2',write),/unavailable or changed/);
+    assert.equal((await as(data.account_link[0].user_id,'aal2',()=>db.query(
+        'select status from public.portal_attendance_register() where enrollment_id=$1 and lecture_id=$2',
+        [sample.enrollment_id,sample.lecture_id]))).rows[0].status,updated);
+    await as(bindings.professor,'aal2',()=>change(updated,sample.status));
+    console.log('PASS: scoped desktop attendance update, concurrent edit conflict and portal visibility');
     const catalog = () => db.query('select * from public.portal_course_catalog()');
     const register = () => db.query('select * from public.portal_attendance_register()');
     for (const { student_id, user_id } of data.account_link) {
