@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
@@ -118,21 +119,25 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
 
 @Composable private fun Sidebar(page:String,compact:Boolean,navigate:(String)->Unit,features:Boolean=false) {
     val destinations=if(features)workspaceDestinations else destinations
-    Column(Modifier.width(if(compact)68.dp else 210.dp).fillMaxHeight().background(Ink.sidebar)
+    val rowHeight = 38.dp
+    val rowSpacing = 6.dp
+    // Compose rounds the row and spacing separately before placing each child.
+    val rowStride = with(LocalDensity.current) { rowHeight.roundToPx() + rowSpacing.roundToPx() }
+    Column(Modifier.width(if(compact)68.dp else 210.dp).fillMaxHeight().background(Ink.sidebar).testTag("workspace-sidebar")
         .padding(horizontal=if(compact)12.dp else 16.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
         Box(Modifier.height(76.dp),contentAlignment=Alignment.CenterStart){Wordmark(compact)}
         if(!compact) Copy("WORKSPACE",10,Ink.muted,FontWeight.Medium,Modifier.padding(start=10.dp))
         Box(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-            val offset by animateDpAsState((destinations.indexOfFirst{it.first==page}.coerceAtLeast(0)*44).dp,
+            val offset by animateIntAsState(destinations.indexOfFirst { it.first == page }.coerceAtLeast(0) * rowStride,
                 motion(),label="navigation-indicator")
-            Box(Modifier.offset { IntOffset(0,offset.roundToPx()) }.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(8.dp))
+            Box(Modifier.offset { IntOffset(0,offset) }.fillMaxWidth().height(rowHeight).clip(ActionShape)
                 .background(Ink.selected).testTag("navigation-indicator"))
-            Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement=Arrangement.spacedBy(rowSpacing)) {
                 destinations.forEach { (label,icon) ->
                     Action(if(compact)"" else label,icon,page==label,
-                        Modifier.fillMaxWidth().height(38.dp).testTag("nav-"+label).semantics {
+                        Modifier.fillMaxWidth().height(rowHeight).testTag("nav-"+label).semantics {
                             contentDescription=label;selected=page==label
-                        },quiet=true,hint=if(compact)label else null) {navigate(label)}
+                        },quiet=true,hint=if(compact)label else null,navigation=true) {navigate(label)}
                 }
             }
         }

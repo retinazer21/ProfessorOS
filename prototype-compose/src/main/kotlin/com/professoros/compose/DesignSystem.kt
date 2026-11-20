@@ -95,9 +95,12 @@ internal fun actionTone(variant:ActionVariant,palette:Palette):ActionTone {
     return ActionTone(lerp(palette.panel,intent,.07f),intent,palette.border)
 }
 
+internal val ActionShape = RoundedCornerShape(8.dp)
+
 @Composable internal fun Action(label: String, icon: String = "arrow", active: Boolean = false,
     modifier: Modifier = Modifier, quiet: Boolean = false,
-    enabled: Boolean = true, hint: String? = null, variant: ActionVariant = ActionVariant.SECONDARY, onClick: () -> Unit) {
+    enabled: Boolean = true, hint: String? = null, variant: ActionVariant = ActionVariant.SECONDARY,
+    navigation: Boolean = false, onClick: () -> Unit) {
     val enabled = enabled && LocalControlsEnabled.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -106,17 +109,25 @@ internal fun actionTone(variant:ActionVariant,palette:Palette):ActionTone {
     val tone=actionTone(if(active) ActionVariant.PRIMARY else variant,LocalPalette.current)
     val surface=tone.surface
     val foreground=if(!enabled)Ink.muted else if(quiet&&!active&&!hovered&&!pressed)Ink.text else tone.foreground
+    // The sliding sidebar indicator owns the selection fill. The row only adds interaction feedback.
     val fill by animateColorAsState(
-        if(!enabled) Ink.raised else if(pressed) lerp(surface,Color.Black,.08f)
+        if(navigation) when {
+            !enabled -> Color.Transparent
+            pressed -> Ink.violet.copy(alpha = .12f)
+            hovered -> if(active) Ink.violet.copy(alpha = .06f) else Ink.raised
+            else -> Color.Transparent
+        }
+        else if(!enabled) Ink.raised else if(pressed) lerp(surface,Color.Black,.08f)
         else if(hovered) lerp(surface,Color.White,.04f) else if(quiet&&!active) Color.Transparent else surface,
         motion(), label = "button-surface")
     Box {
-    Row(modifier.heightIn(min = 36.dp).clip(RoundedCornerShape(8.dp)).background(fill)
-        .border(if(focused)2.dp else 1.dp, if (focused) Ink.violet else if (quiet&&!active) Color.Transparent else if(!enabled)Ink.border.copy(alpha=.5f) else tone.border, RoundedCornerShape(8.dp))
+    Row(modifier.heightIn(min = 36.dp).clip(ActionShape).background(fill)
+        .border(if(focused)2.dp else 1.dp, if (focused) Ink.violet else if (navigation || quiet&&!active) Color.Transparent else if(!enabled)Ink.border.copy(alpha=.5f) else tone.border, ActionShape)
         .hoverable(interaction).clickable(interactionSource = interaction, indication = null, enabled = enabled,
             role = Role.Button, onClick = onClick)
         .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if(navigation && label.isEmpty()) Arrangement.Center else Arrangement.spacedBy(9.dp)) {
         Mark(icon, foreground, 16)
         if (label.isNotEmpty()) Copy(label, 12, foreground, FontWeight.Medium, lines = 1)
     }

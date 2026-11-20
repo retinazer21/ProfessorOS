@@ -4,12 +4,16 @@ package com.professoros.compose
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.unit.Density
 import org.junit.Test
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
@@ -102,6 +106,50 @@ class DashboardUiTest {
         repeat(10){onNodeWithTag("dashboard-root").captureToImage()}
         File(output(),"render-observation.txt").writeText("10 warmed captures: "+(System.nanoTime()-began)/1_000_000+
             " ms. Readback/synchronization included; not FPS. Spring reached destination and idle pixels remained stable.\n")
+    }
+
+    @Test fun sidebarStatesAlignAtFractionalScalingInEveryTheme() = runSkikoComposeUiTest(size=Size(1500f,1125f)) {
+        var palette by mutableStateOf(DarkPalette)
+        var page by mutableStateOf("Settings")
+        setContent {
+            CompositionLocalProvider(LocalPalette provides palette, LocalDensity provides Density(1.25f)) {
+                ProfessorDashboard(null,false,null,page,{page=it},{},{},featureContent={})
+            }
+        }
+
+        val overview = onNodeWithTag("nav-Overview")
+        val activity = onNodeWithTag("nav-Activity")
+        val settings = onNodeWithTag("nav-Settings")
+        val sidebar = onNodeWithTag("workspace-sidebar")
+        settings.assertIsSelected()
+        assertEquals(settings.fetchSemanticsNode().boundsInRoot,
+            onNodeWithTag("navigation-indicator").fetchSemanticsNode().boundsInRoot)
+        activity.performSemanticsAction(SemanticsActions.RequestFocus) { it() }
+        activity.performKeyInput { runOnUiThread { pressKey(Key.Tab) } }
+        settings.assertIsFocused()
+        activity.performMouseInput { moveTo(center) }
+
+        for ((id, sample) in themeCatalog) {
+            runOnIdle { palette=sample.palette }
+            val current = sample.palette
+            fun edge(node: SemanticsNodeInteraction, inset: Int = 0): Int {
+                val image = node.captureToImage().toAwtImage()
+                return image.getRGB(inset, image.height / 2)
+            }
+            assertEquals(current.sidebar.toArgb(),edge(overview),"${sample.name} inactive surface")
+            assertEquals(current.raised.toArgb(),edge(activity),"${sample.name} hover surface")
+            assertEquals(current.violet.toArgb(),edge(settings),"${sample.name} keyboard focus")
+            assertEquals(current.selected.toArgb(),edge(settings,4),"${sample.name} selected surface")
+            for (surface in listOf(current.sidebar,current.raised,current.selected)) {
+                val colors = listOf(current.violet.luminance(),surface.luminance()).sorted()
+                assertTrue((colors[1]+.05f)/(colors[0]+.05f) >= 3f,"${sample.name} focus contrast")
+            }
+            ImageIO.write(sidebar.captureToImage().toAwtImage(),"png",File(output(),"sidebar-${id.lowercase()}.png"))
+        }
+        activity.performSemanticsAction(SemanticsActions.RequestFocus) { it() }
+        activity.performKeyInput { runOnUiThread { pressKey(Key.Enter) } }
+        activity.assertIsSelected()
+        settings.assertIsNotSelected()
     }
 
     @Test fun emptyWorkspaceRendersHonestGuidance() = runSkikoComposeUiTest(size=Size(900f,720f)) {
