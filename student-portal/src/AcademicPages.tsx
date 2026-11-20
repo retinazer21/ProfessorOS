@@ -1,6 +1,7 @@
+import { useMotionPreference } from './appearance';
 import { useState } from "react";
 import { PublishedGrades } from './PublishedGrades';
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import {
     ArrowLeft,
     ArrowRight,
@@ -238,7 +239,7 @@ export function CourseDetail({ course }: { course: Course }) {
 }
 
 export function Grades() {
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useMotionPreference();
     return (
         <>
             <PublishedGrades />
@@ -355,7 +356,7 @@ export function Grades() {
 }
 
 export function Attendance() {
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useMotionPreference();
     return (
         <>
             <PageIntro

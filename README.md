@@ -19,6 +19,8 @@ An offline-first academic workspace for university professors, with a separate S
 | Exam and answer-key PDF preview/export | Session refresh and global sign-out |
 | Local SQLite persistence, migrations and appearance settings | Hash routing compatible with static GitHub Pages hosting |
 
+Desktop Settings and the portal’s Appearance gallery share ten workspace themes. Choose a theme or follow the system, adjust the accent, and reduce motion. Each device or browser keeps its own preference.
+
 ## Screenshots
 
 ### Student Portal — desktop

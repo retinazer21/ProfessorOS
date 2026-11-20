@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
@@ -22,9 +23,31 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Popup
 
 /** Shared presentation tokens. No Material components or platform-specific rendering dependencies. */
-data class Palette(val background: Color, val sidebar: Color, val panel: Color, val raised: Color, val selected: Color, val border: Color, val text: Color, val muted: Color, val violet: Color, val positive: Color, val accentSurface: Color)
-val DarkPalette = Palette(Color(0xFF141824),Color(0xFF181D2B),Color(0xFF202735),Color(0xFF293243),Color(0xFF38354C),Color(0xFF495368),Color(0xFFEDEFF6),Color(0xFFB6BFD0),Color(0xFFC7B7E7),Color(0xFFA4CFBE),Color(0xFF2D293E))
-val LightPalette = Palette(Color(0xFFF5F4F7),Color(0xFFEFEDF2),Color(0xFFFFFFFF),Color(0xFFF0EEF4),Color(0xFFE4DFED),Color(0xFFA4A6B4),Color(0xFF202027),Color(0xFF57515F),Color(0xFF644A83),Color(0xFF35634D),Color(0xFFEDE7F4))
+data class Palette(val background: Color, val sidebar: Color, val panel: Color, val raised: Color, val selected: Color, val border: Color, val text: Color, val muted: Color, val violet: Color, val positive: Color, val accentSurface: Color, val info: Color, val warning: Color, val danger: Color)
+internal data class ThemeSample(val name:String, val palette:Palette)
+internal val themeCatalog = checkNotNull(Palette::class.java.getResourceAsStream("/appearance.tsv")).bufferedReader().useLines { lines ->
+    val rows = lines.iterator()
+    val columns = rows.next().trimStart('\uFEFF').split('\t')
+    rows.asSequence().filter { it.isNotBlank() }.associate { line ->
+        val values = columns.zip(line.split('\t')).toMap()
+        fun color(role: String) = Color((0xff000000L or values.getValue(role).drop(1).toLong(16)).toInt())
+        val palette = Palette(color("bg"), color("sidebar"), color("panel"), color("raised"),
+            color("selected"), color("border"), color("text"), color("muted"), color("accent"),
+            color("positive"), color("accentSurface"), color("info"), color("warning"), color("danger"))
+        values.getValue("id") to ThemeSample(values.getValue("name"), palette)
+    }
+}
+val DarkPalette = themeCatalog.getValue("DARK").palette
+val LightPalette = themeCatalog.getValue("LIGHT").palette
+internal fun workspacePalette(mode: com.professoros.model.ThemeMode, systemDark: Boolean, accent: String): Palette {
+    val base = themeCatalog[mode.name]?.palette ?: if (systemDark) DarkPalette else LightPalette
+    return when (accent) {
+        "info" -> base.copy(violet = base.info)
+        "positive" -> base.copy(violet = base.positive)
+        else -> base
+    }
+}
+internal val LocalReduced = staticCompositionLocalOf { false }
 internal val LocalPalette = staticCompositionLocalOf { DarkPalette }
 object Ink {
     val background: Color @Composable get() = LocalPalette.current.background
@@ -54,29 +77,22 @@ internal fun fontFor(text: String) = if (ArabicText.containsMatchIn(text)) arabi
         fontFamily = fontFor(text), fontWeight = weight,
         textDirection = TextDirection.Content), maxLines = lines, overflow = TextOverflow.Ellipsis)
 }
-internal fun <T> motion(): FiniteAnimationSpec<T> = spring(dampingRatio = 1f, stiffness = 420f)
+@Composable internal fun <T> motion(): FiniteAnimationSpec<T> = if(LocalReduced.current) snap() else spring(dampingRatio = 1f, stiffness = 420f)
 
 @Composable internal fun Rule() = Box(Modifier.fillMaxWidth().height(1.dp).background(Ink.border.copy(alpha=.65f)))
 
 /** Intent is explicit at call sites; labels never determine action semantics. */
 internal enum class ActionVariant { PRIMARY, SUCCESS, DESTRUCTIVE, SECONDARY, WARNING }
 internal data class ActionTone(val surface:Color,val foreground:Color,val border:Color)
-internal fun actionTone(variant:ActionVariant,light:Boolean=false):ActionTone {
-    fun tone(surface:Long,foreground:Long,border:Long)=ActionTone(Color(surface),Color(foreground),Color(border))
-    if(light)return when(variant) {
-        ActionVariant.PRIMARY -> tone(0xFF5D4C80,0xFFFFFFFF,0xFF786595)
-        ActionVariant.SUCCESS -> tone(0xFFE6EFEB,0xFF285744,0xFF9AB9AA)
-        ActionVariant.DESTRUCTIVE -> tone(0xFFF3E7EB,0xFF883E50,0xFFC69AA6)
-        ActionVariant.SECONDARY -> tone(0xFFEBECF2,0xFF3E495E,0xFFA4A9B8)
-        ActionVariant.WARNING -> tone(0xFFF2EDE3,0xFF735521,0xFFC2AE86)
+internal fun actionTone(variant:ActionVariant,palette:Palette):ActionTone {
+    val intent=when(variant) {
+        ActionVariant.PRIMARY -> palette.violet
+        ActionVariant.SUCCESS -> palette.positive
+        ActionVariant.DESTRUCTIVE -> palette.danger
+        ActionVariant.WARNING -> palette.warning
+        ActionVariant.SECONDARY -> palette.text
     }
-    return when(variant) {
-        ActionVariant.PRIMARY -> tone(0xFF51436F,0xFFF1EBFF,0xFF71608F)
-        ActionVariant.SUCCESS -> tone(0xFF243532,0xFF95D2B5,0xFF426052)
-        ActionVariant.DESTRUCTIVE -> tone(0xFF382A32,0xFFE3A9AE,0xFF6C4851)
-        ActionVariant.SECONDARY -> tone(0xFF252D3C,0xFFCAD3E3,0xFF465167)
-        ActionVariant.WARNING -> tone(0xFF363128,0xFFDFC08B,0xFF685B43)
-    }
+    return ActionTone(lerp(palette.panel,intent,.07f),intent,palette.border)
 }
 
 @Composable internal fun Action(label: String, icon: String = "arrow", active: Boolean = false,
@@ -87,7 +103,7 @@ internal fun actionTone(variant:ActionVariant,light:Boolean=false):ActionTone {
     val hovered by interaction.collectIsHoveredAsState()
     val focused by interaction.collectIsFocusedAsState()
     val pressed by interaction.collectIsPressedAsState()
-    val tone=actionTone(if(active)ActionVariant.PRIMARY else variant,LocalPalette.current.background.luminance()>.5f)
+    val tone=actionTone(if(active) ActionVariant.PRIMARY else variant,LocalPalette.current)
     val surface=tone.surface
     val foreground=if(!enabled)Ink.muted else if(quiet&&!active&&!hovered&&!pressed)Ink.text else tone.foreground
     val fill by animateColorAsState(
@@ -108,6 +124,12 @@ internal fun actionTone(variant:ActionVariant,light:Boolean=false):ActionTone {
         Box(Modifier.background(Ink.raised,RoundedCornerShape(6.dp)).border(1.dp,Ink.border,RoundedCornerShape(6.dp)).padding(8.dp)){Copy(hint,12)}
     }
     }
+}
+
+@Composable internal fun Modifier.floatingSurface(): Modifier {
+    val shade = lerp(Color.Black, Ink.background, .18f).copy(alpha = .4f)
+    return padding(6.dp).shadow(5.dp, RoundedCornerShape(Ink.radius), clip = false,
+        ambientColor = shade, spotColor = shade)
 }
 
 @Composable internal fun Panel(modifier: Modifier = Modifier, tinted: Boolean = false,
@@ -149,9 +171,9 @@ internal fun actionTone(variant:ActionVariant,light:Boolean=false):ActionTone {
 @Composable internal fun Wordmark(compact: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF45404F),Color(0xFF2D2B33))))
-            .border(1.dp,Color(0xFF625B70),RoundedCornerShape(8.dp)),contentAlignment=Alignment.Center) {
-            Copy("P",18,DarkPalette.text,FontWeight.SemiBold)
+            .background(Ink.accentSurface)
+            .border(1.dp,Ink.border,RoundedCornerShape(8.dp)),contentAlignment=Alignment.Center) {
+            Copy("P",18,Ink.violet,FontWeight.SemiBold)
         }
         if(!compact) Copy("Professor OS",14,weight=FontWeight.SemiBold)
     }

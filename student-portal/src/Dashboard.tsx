@@ -1,5 +1,6 @@
+import { useMotionPreference } from './appearance';
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { activities, courses, student, type Course } from "./demo";
 import { CourseArtwork } from "./CourseArtwork";
 import "./dashboard.css";
@@ -40,7 +41,7 @@ function Upcoming() {
 }
 
 function CourseShelf() {
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useMotionPreference();
     return (
         <section className="studio-courses" aria-labelledby="studio-courses-title">
             <div className="studio-section-heading">
@@ -84,7 +85,7 @@ function CourseShelf() {
 }
 
 function DegreeProgress() {
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useMotionPreference();
     return (
         <section className="studio-degree" aria-labelledby="studio-degree-title">
             <h2 id="studio-degree-title">Degree progress</h2>

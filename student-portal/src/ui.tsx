@@ -1,6 +1,7 @@
+import { useMotionPreference } from './appearance';
 import { useAuth } from './auth/AuthProvider';
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import {
     ArrowRight,
     BookOpen,
@@ -277,7 +278,7 @@ export function Meter({
     color?: string;
     label?: string;
 }) {
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useMotionPreference();
     return (
         <motion.div
             className="meter"
@@ -334,7 +335,7 @@ export function CourseArt({ course }: { course: Course }) {
     );
 }
 export function CourseCard({ course, order = 0 }: { course: Course; order?: number }) {
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useMotionPreference();
     return (
         <motion.article className={`course-card course-tone-${course.color}`}
             initial={reduceMotion ? false : { opacity: 0.5, y: 12 }}

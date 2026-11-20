@@ -114,7 +114,7 @@ data class TableColumn<T>(val title:String,val weight:Float=1f,val text:(T)->Str
         val width=(maxWidth-48.dp).coerceAtMost(if(wide)1040.dp else 620.dp)
         val height=(maxHeight-48.dp).coerceAtMost(800.dp)
         Popup(alignment=Alignment.Center,onDismissRequest=close,properties=PopupProperties(focusable=true)) {
-            Column(Modifier.width(width).heightIn(max=height).background(Ink.panel,RoundedCornerShape(14.dp))
+            Column(Modifier.floatingSurface().width(width).heightIn(max=height).background(Ink.panel,RoundedCornerShape(14.dp))
                 .border(1.dp,Ink.border,RoundedCornerShape(14.dp)).padding(22.dp).testTag("editor-modal")
                 .onPreviewKeyEvent {
                     if(it.type!=KeyEventType.KeyDown)false

@@ -33,7 +33,7 @@ class SettingsUiTest {
             val scope=rememberCoroutineScope()
             settings=remember {AppearanceSettings(path,scope)}
             c=remember {WorkspaceController(WorkspaceServices(path),scope)}
-            CompositionLocalProvider(LocalPalette provides if(settings.mode.dark(systemDark))DarkPalette else LightPalette) {
+            CompositionLocalProvider(LocalPalette provides workspacePalette(settings.mode,systemDark,settings.accent), LocalReduced provides settings.reduced) {
                 Box(Modifier.requiredSize(width.dp,height.dp)) {
                     ProfessorDashboard(data,false,null,page,{page=it},{},{},featureContent={
                         if(it=="Settings")SettingsScreen(settings){page="Terms"} else CatalogScreen(it,c){}
@@ -43,7 +43,7 @@ class SettingsUiTest {
         }
         runOnIdle {c.editCourse();c.form!!.values["name"]="Unsaved course"}
         val draft=c.form
-        for(mode in listOf(ThemeMode.LIGHT,ThemeMode.DARK,ThemeMode.SYSTEM)) {
+        for(mode in themeCatalog.keys.map(ThemeMode::valueOf) + ThemeMode.SYSTEM) {
             onNodeWithTag("theme-${mode.name}").performClick()
             waitUntil(timeoutMillis=10000){!settings.saving}
             assertEquals(mode,settings.mode)
@@ -52,6 +52,14 @@ class SettingsUiTest {
             assertEquals("Settings",page)
             snapshot("settings-${mode.name.lowercase()}")
         }
+        onNodeWithText("Blue").performScrollTo().performClick()
+        waitUntil(timeoutMillis=10000){!settings.saving}
+        onNodeWithText("Reduce motion").performScrollTo().performClick()
+        waitUntil(timeoutMillis=10000){!settings.saving}
+        val saved = ThemePreferences(settings.preferenceFile).read()
+        assertEquals("info", saved.accent())
+        assertTrue(saved.reduced())
+        assertEquals(DarkPalette.info, workspacePalette(saved.mode(), true, saved.accent()).violet)
         runOnIdle {systemDark=false;width=864;height=621}
         snapshot("settings-system-light-minimum")
         onNodeWithTag("storage-path").performScrollTo().assertTextEquals(path.toString())
@@ -75,7 +83,7 @@ class SettingsUiTest {
     }
 
     @Test fun lightAndDarkTokensHaveReadableContrastAndSystemResolves() {
-        for(p in listOf(LightPalette,DarkPalette))for(bg in listOf(p.background,p.panel,p.raised,p.selected,p.accentSurface))
+        for(p in themeCatalog.values.map { it.palette })for(bg in listOf(p.background,p.panel,p.raised,p.selected,p.accentSurface))
             for(fg in listOf(p.text,p.muted,p.violet,p.positive)) {
                 val a=fg.luminance();val b=bg.luminance()
                 assertTrue((maxOf(a,b)+.05f)/(minOf(a,b)+.05f)>=4.5f,"Insufficient contrast: $fg on $bg")
@@ -84,12 +92,12 @@ class SettingsUiTest {
         assertTrue(ThemeMode.DARK.dark(false));assertFalse(ThemeMode.LIGHT.dark(true))
     }
     @Test fun semanticButtonsKeepAaTextContrastInInteractiveStates() {
-        for(light in listOf(false,true))for(variant in ActionVariant.entries) {
-            val tone=actionTone(variant,light)
+        for(p in themeCatalog.values.map { it.palette })for(variant in ActionVariant.entries) {
+            val tone=actionTone(variant,p)
             val base=tone.surface
             for(surface in listOf(base,androidx.compose.ui.graphics.lerp(base,androidx.compose.ui.graphics.Color.White,.04f),androidx.compose.ui.graphics.lerp(base,androidx.compose.ui.graphics.Color.Black,.08f))) {
                 val a=tone.foreground.luminance();val b=surface.luminance()
-                assertTrue((maxOf(a,b)+.05f)/(minOf(a,b)+.05f)>=4.5f,"Button contrast: $variant light=$light")
+                assertTrue((maxOf(a,b)+.05f)/(minOf(a,b)+.05f)>=4.5f,"Button contrast: $variant palette=$p")
             }
         }
     }

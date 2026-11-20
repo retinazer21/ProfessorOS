@@ -1,0 +1,32 @@
+/* The shared catalog sets the color roles on the document. Manrope and existing
+   type scales follow the same heading, body and numeric hierarchy as Desktop. */
+:root { color: var(--text); background: var(--bg); accent-color: var(--accent); }
+html[data-appearance] { --shadow: color-mix(in srgb, color-mix(in srgb, black 82%, var(--bg)) 20%, transparent); }
+.auth-page .brand > span:last-child { opacity: 1; }
+.auth-page .auth-art-side { background: var(--accentSurface); color: var(--text); }
+.auth-art-side .auth-art-rings > div:first-child { background: color-mix(in srgb, var(--accent) 45%, var(--panel)); }
+.auth-art-side .auth-art-rings > div:nth-child(2), .auth-art-side .auth-art-rings > span { background: var(--accentSurface); color: var(--accent); }
+.auth-art-side .auth-art-rings > div:nth-child(3) { background: var(--accent); }
+.auth-art-side .auth-art-copy h2 em { color: var(--accent); }
+.auth-art-side .auth-art-copy p, .auth-art-side .auth-art-index { color: var(--muted); }
+.auth-center [role=alert], .auth-card > [role=alert] { color: var(--danger); }
+.auth-card input, .auth-card select { background: var(--panel); color: var(--text); }
+.mfa-qr { background: white; padding: 8px; }
+.appearance-gallery { margin-block: 1rem; color: var(--text); font-size: .875rem; }
+.appearance-gallery summary { cursor: pointer; width: fit-content; color: var(--accent); font-weight: 700; padding-block: .6rem; }
+.appearance-gallery fieldset { padding: .75rem 0; border: none; margin: 0; }
+.appearance-gallery legend { font-size: 1.05rem; font-weight: 700; }
+.appearance-option, .appearance-options label { display: inline-flex; align-items: center; gap: .45rem; min-height: 36px; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(125px, 100%), 1fr)); gap: .55rem; margin-top: .65rem; }
+.theme-sample { cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: .45rem; align-items: center; padding: .65rem; color: var(--ink); background: var(--sample); border: 1px solid var(--rule); border-radius: 8px; font-weight: 650; transition: box-shadow 140ms ease; }
+.theme-sample input { grid-column: 2; grid-row: 1; accent-color: var(--stripe); }
+.theme-sample > span:last-child { grid-column: span 2; }
+.theme-sample:has(:checked), .theme-sample:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.theme-sample:hover { box-shadow: 0 2px 8px var(--shadow); }
+.sample-art { grid-row: 1; grid-column: 1; display: flex; align-items: end; gap: 3px; height: 18px; }
+.sample-art i { width: 10px; height: 50%; background: var(--stripe); border-radius: 2px 2px 0 0; }
+.sample-art i:nth-child(2) { height: 75%; background: var(--chart); }
+.sample-art i:nth-child(3) { height: 100%; }
+.appearance-options { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.appearance-options select { color: var(--text); background: var(--panel); border: 1px solid var(--border); padding: .35rem; border-radius: 4px; }
+html[data-motion=reduced], html[data-motion=reduced] *, html[data-motion=reduced] *::before, html[data-motion=reduced] *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: 0s !important; scroll-behavior: auto !important; }

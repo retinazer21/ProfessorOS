@@ -26,6 +26,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
     refresh: () -> Unit, selectOffering: (Long) -> Unit,
     featureContent: (@Composable (String) -> Unit)? = null) {
     var picker by remember { mutableStateOf(false) }
+    val reduced=LocalReduced.current
     val pageScroll=rememberScrollState()
     LaunchedEffect(page) { pageScroll.scrollTo(0) }
     BoxWithConstraints(Modifier.fillMaxSize().background(Ink.background).testTag("dashboard-root")
@@ -50,7 +51,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
                             modifier=Modifier.widthIn(max=280.dp).testTag("choose-context").semantics { contentDescription="Choose teaching context, Control K" }) { picker=true }
                         if(picker) Popup(alignment=Alignment.TopEnd,offset=IntOffset(0,46),onDismissRequest={picker=false},
                             properties=PopupProperties(focusable=true)) {
-                            Panel(Modifier.width(400.dp).heightIn(max=460.dp).testTag("context-popup")
+                            Panel(Modifier.floatingSurface().width(400.dp).heightIn(max=460.dp).testTag("context-popup")
                                 .onPreviewKeyEvent {
                                     if(it.type==KeyEventType.KeyDown && it.key==Key.Escape) {picker=false;true} else false
                                 }) {
@@ -83,9 +84,9 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
                             if(error==null) Copy("Opening your saved workspace…",14,Ink.muted)
                         } else {
                             AnimatedContent(page,modifier=if(sheetPage)Modifier.weight(1f).fillMaxWidth() else Modifier,transitionSpec={
-                                (fadeIn(tween(170)) + slideInVertically(motion()) { 12 })
+                                if(reduced) EnterTransition.None.togetherWith(ExitTransition.None) else (fadeIn(tween(170)) + slideInVertically(spring(dampingRatio=1f,stiffness=420f)) { 12 })
                                     .togetherWith(fadeOut(tween(80)))
-                                    .using(SizeTransform(clip=false,sizeAnimationSpec={_,_->motion()}))
+                                    .using(SizeTransform(clip=false,sizeAnimationSpec={_,_->spring(dampingRatio=1f,stiffness=420f)}))
                             },label="page-reveal") { destination ->
                                 if(featureContent!=null && destination !in listOf("Overview","Activity")) featureContent(destination)
                                 else when(destination) {

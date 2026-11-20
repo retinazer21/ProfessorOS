@@ -117,12 +117,14 @@ class AttendanceUiTest {
             Box(Modifier.fillMaxSize()){AttendanceScreen(c);WorkspaceOverlays(c)}}
         settled(c);val students=c.attendance!!.book.students().sortedBy {it.student().studentNumber()}
         fun row(n:Int)=onNodeWithTag("attendance-row-${students[n].enrollment().id()}")
-        row(0).performClick().performKeyInput {pressKey(Key.E)}
-        for(n in 0..11){row(n).performKeyInput {pressKey(Key.DirectionDown)};row(n+1).assertIsFocused()}
-        row(12).performKeyInput {pressKey(Key.L)}
+        // Dispatch keyboard input on the UI thread, as the native window does.
+        fun press(n: Int, key: Key) = row(n).performKeyInput { runOnUiThread { pressKey(key) } }
+        row(0).performClick(); press(0, Key.E)
+        for(n in 0..11){press(n, Key.DirectionDown);row(n+1).assertIsFocused()}
+        press(12, Key.L)
         assertEquals(AttendanceStatus.EXCUSED,c.attendance!!.value(students[0].enrollment().id()))
         assertEquals(AttendanceStatus.LATE,c.attendance!!.value(students[12].enrollment().id()))
-        row(12).performKeyInput {pressKey(Key.U)};assertNull(c.attendance!!.value(students[12].enrollment().id()))
+        press(12, Key.U);assertNull(c.attendance!!.value(students[12].enrollment().id()))
         runOnIdle {c.guard {c.select(null)}};onNodeWithTag("confirm").performClick();settled(c)
         onNodeWithText("Choose a teaching context to record attendance.").assertExists();assertNull(c.attendance)
     }

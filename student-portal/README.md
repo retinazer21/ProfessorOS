@@ -2,6 +2,10 @@
 
 The Student Portal retains its Studio Window UI and fictional academic previews, with real Supabase password authentication, sessions, required TOTP MFA, and database-level RBAC/RLS. See [Auth setup and verification](AUTH_SETUP.md) for configuration, provisioning, applied migration and remaining prerequisites.
 
+## Appearance
+
+Open **Appearance** below the sign-in form or in **Profile & security**. Theme, accent and motion preferences are saved in this browser. System mode follows device changes, and the browser’s reduced-motion setting takes precedence.
+
 ## Run locally
 
 Requires Node.js 24. Configure `.env.local` from `.env.example` before starting.

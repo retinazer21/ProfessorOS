@@ -1,3 +1,4 @@
+import { AppearanceGallery } from './appearance';
 import { AuthForm } from './auth/AuthForm';
 import { useAuth } from './auth/AuthProvider';
 import {
@@ -20,6 +21,7 @@ export function Profile() {
                 title="Profile & security"
                 description="A preview of the personal and account settings experience."
             />
+            <AppearanceGallery />
             <div className="profile-layout">
                 <Panel className="profile-card">
                     <div className="profile-banner">
@@ -121,6 +123,7 @@ export function AuthScreen({ mfa }: { mfa: boolean }) {
                         <ShieldCheck size={15} /> Managed authentication · MFA required
                     </p>
                 </div>
+                <AppearanceGallery />
                 <span className="auth-footer">
                     © 2026 Professor OS · Student Portal concept
                 </span>

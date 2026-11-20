@@ -1,6 +1,7 @@
+import { useMotionPreference } from './appearance';
 import { useAuth } from './auth/AuthProvider';
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, MotionConfig, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { courses } from "./demo";
 import { isCurrentRoute, nav, Sidebar, Topbar } from "./ui";
 import {
@@ -34,7 +35,7 @@ export default function App() {
     const requestedRoute = useRoute();
     const { access, error, logout, refresh } = useAuth();
     const route = ['/login', '/mfa'].includes(requestedRoute) ? '/dashboard' : requestedRoute;
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useMotionPreference();
     const [menuOpen, setMenuOpen] = useState(false);
     useEffect(() => {
         const mobile = window.matchMedia("(max-width: 800px)");
@@ -56,7 +57,6 @@ export default function App() {
         ? courses.find((c) => c.id === route.slice("/courses/".length))
         : undefined;
     return (
-        <MotionConfig reducedMotion="user">
         <div className={route === "/dashboard" ? "app-shell studio-shell" : "app-shell"}>
             <button
                 className="skip-link"
@@ -133,6 +133,5 @@ export default function App() {
                 ))}
             </nav>
         </div>
-        </MotionConfig>
     );
 }

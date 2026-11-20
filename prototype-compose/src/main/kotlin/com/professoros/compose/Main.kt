@@ -25,7 +25,10 @@ fun main() = application {
             }
             onDispose {}
         }
-        CompositionLocalProvider(LocalPalette provides if(preferences.mode.dark(isSystemInDarkTheme())) DarkPalette else LightPalette) {
+        val focused = androidx.compose.ui.platform.LocalWindowInfo.current.isWindowFocused
+        val systemReduced = remember(focused) { systemReducesMotion() }
+        val palette = workspacePalette(preferences.mode, isSystemInDarkTheme(), preferences.accent)
+        CompositionLocalProvider(LocalPalette provides palette, LocalReduced provides (preferences.reduced || systemReduced)) {
         ProfessorDashboard(workspace.snapshot, workspace.busy, workspace.loadError, page, { next ->workspace.guard {page=next} },
             { workspace.guard {workspace.refresh()} }, { id ->workspace.select(id) {page="Teaching context"} },featureContent={ destination ->
                 CompositionLocalProvider(LocalControlsEnabled provides !workspace.busy) {

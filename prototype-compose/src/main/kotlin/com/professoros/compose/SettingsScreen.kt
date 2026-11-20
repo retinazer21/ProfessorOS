@@ -1,12 +1,19 @@
 package com.professoros.compose
 
 import androidx.compose.runtime.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import com.professoros.model.ThemeMode
 import com.professoros.service.ThemePreferences
@@ -19,14 +26,17 @@ import java.util.logging.Logger
 class AppearanceSettings(val database:Path, private val scope:CoroutineScope) {
     val preferenceFile:Path = database.resolveSibling("appearance.properties")
     private val preferences = ThemePreferences(preferenceFile)
-    var mode by mutableStateOf(preferences.load()); private set
+    private val initial = preferences.read()
+    var mode by mutableStateOf(initial.mode()); private set
+    var accent by mutableStateOf(initial.accent()); private set
+    var reduced by mutableStateOf(initial.reduced()); private set
     var saving by mutableStateOf(false); private set
     var error by mutableStateOf<String?>(null); private set
-    fun select(next:ThemeMode) {
-        if(saving || next==mode)return
+    fun select(next:ThemeMode, tone:String=accent, lessMotion:Boolean=reduced) {
+        if(saving || (next==mode && tone==accent && lessMotion==reduced))return
         saving=true;error=null
         scope.launch {
-            try { withContext(Dispatchers.IO){preferences.save(next)};mode=next }
+            try { withContext(Dispatchers.IO){preferences.save(ThemePreferences.Choice(next,tone,lessMotion))};mode=next;accent=tone;reduced=lessMotion }
             catch(cancelled:CancellationException){throw cancelled}
             catch(failure:Exception){
                 Logger.getLogger("ComposeSettings").log(Level.WARNING,"Cannot save appearance",failure)
@@ -40,15 +50,34 @@ class AppearanceSettings(val database:Path, private val scope:CoroutineScope) {
     Column(Modifier.fillMaxWidth().testTag("settings-page"),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         Panel(Modifier.fillMaxWidth()) {
             Copy("Appearance",20)
-            Copy("A considered workspace, in your preferred light. Changes keep your current work in place.",13,Ink.muted)
-            Toolbar {
-                ThemeMode.entries.forEach {mode->
-                    Action(mode.name.lowercase().replaceFirstChar {it.uppercase()},"settings",active=settings.mode==mode,
-                        enabled=!settings.saving,modifier=Modifier.testTag("theme-${mode.name}").semantics {selected=settings.mode==mode}){settings.select(mode)}
+            Copy("Choose a theme for this device.",13,Ink.muted)
+            Action("Follow system appearance",active=settings.mode==ThemeMode.SYSTEM,enabled=!settings.saving,modifier=Modifier.testTag("theme-SYSTEM")) { settings.select(ThemeMode.SYSTEM) }
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                themeCatalog.forEach { (id,sample) ->
+                    val mode=ThemeMode.valueOf(id)
+                    val p=sample.palette
+                    val active=settings.mode==mode
+                    val shape=RoundedCornerShape(8.dp)
+                    val interaction = remember { MutableInteractionSource() }
+                    val focused by interaction.collectIsFocusedAsState()
+                    Column(Modifier.width(144.dp).background(p.panel,shape)
+                        .border(if(active || focused) 2.dp else 1.dp,if(focused) p.text else if(active) Ink.violet else Ink.border,shape)
+                        .testTag("theme-"+id).selectable(active,interactionSource=interaction,indication=null,enabled=!settings.saving,role=Role.RadioButton){settings.select(mode)}.padding(10.dp)) {
+                        Row(verticalAlignment=androidx.compose.ui.Alignment.Bottom, horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+                            listOf(p.violet to 8.dp, p.positive to 13.dp, p.violet to 18.dp).forEach { (color,height) ->
+                                Box(Modifier.width(10.dp).height(height).background(color,RoundedCornerShape(2.dp)))
+                            }
+                            if (active) { Spacer(Modifier.weight(1f)); Mark("check",p.text,16) }
+                        }
+                        Spacer(Modifier.height(7.dp)); Copy(sample.name,13,p.text)
+                    }
                 }
             }
-            Copy(if(settings.saving)"Saving appearance…" else "${settings.mode} · saved on this device",12,Ink.muted)
-            Copy("System follows your desktop appearance. Your selection is remembered when you reopen Professor OS.",12,Ink.muted)
+            Copy("Accent",14)
+            Toolbar { listOf("accent" to "Theme default","info" to "Blue","positive" to "Green").forEach { (key,label) ->
+                Action(label,active=settings.accent==key,modifier=Modifier.semantics { selected=settings.accent==key },enabled=!settings.saving){settings.select(settings.mode,key)}
+            } }
+            Action("Reduce motion",icon=if(settings.reduced) "check" else "arrow",active=settings.reduced,modifier=Modifier.semantics { selected=settings.reduced },enabled=!settings.saving){settings.select(settings.mode,lessMotion=!settings.reduced)}
             settings.error?.let {Copy(it,13,Ink.violet,modifier=Modifier.testTag("settings-error"))}
         }
         Panel(Modifier.fillMaxWidth()) {

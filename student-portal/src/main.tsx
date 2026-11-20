@@ -6,8 +6,11 @@ import './navigation.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth/AuthProvider'
 
+import { AppearanceProvider } from './appearance'
+import './appearance.css'
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider><App /></AuthProvider>
+    <AppearanceProvider><AuthProvider><App /></AuthProvider></AppearanceProvider>
   </StrictMode>,
 )

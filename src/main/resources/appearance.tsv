@@ -1,0 +1,11 @@
+id	name	scheme	bg	sidebar	panel	raised	selected	border	text	muted	accent	positive	accentSurface	info	warning	danger
+LIGHT	Studio Light	light	#f5f3ee	#fbf9f5	#fffefb	#f4f3f0	#ebe7ee	#989792	#262622	#514f47	#654b98	#146344	#e9e6e7	#255d88	#775015	#923449
+DARK	Midnight Violet	dark	#141520	#1b1c29	#202130	#2b2b3a	#37354b	#797782	#f4effa	#c4bfd2	#cfb8ff	#8edfc0	#232232	#9ecafa	#f5ce86	#ffb3bf
+SAKURA	Sakura	light	#faf0f1	#fdf6f7	#fffafb	#f5eff1	#f1dfe6	#a39599	#39262e	#614451	#962e59	#346347	#f2e0e5	#255d88	#775015	#923449
+AURORA	Aurora	dark	#101d21	#16242a	#1a2a31	#24343b	#244245	#718080	#e8f9f5	#b3d1ce	#68e5c7	#a6e0a6	#172d2e	#9ecafa	#f5ce86	#ffb3bf
+OCEANIC	Oceanic	dark	#0b1c30	#10253a	#142c43	#1f364c	#22415b	#717f8d	#edf7ff	#b9d1e4	#81ceff	#81e3c9	#142a41	#9ecafa	#f5ce86	#ffb3bf
+EMBER	Ember	dark	#211916	#2a1f1a	#32231e	#3c2d28	#4d352b	#857c75	#fff4e8	#ddc4b7	#ffb083	#c0d695	#33251f	#9ecafa	#f5ce86	#ffb3bf
+FOREST	Forest	dark	#132019	#1a2920	#203026	#2a3a30	#334634	#768076	#eff6e7	#c0cdb8	#b2d88e	#7addb1	#202f22	#9ecafa	#f5ce86	#ffb3bf
+NEON_NOIR	Neon Noir	dark	#101014	#17171c	#1d1c23	#28272d	#36392e	#787878	#f8f7f2	#c9c7d0	#dbfa78	#78e9bd	#20231c	#9ecafa	#f5ce86	#ffb3bf
+LAVENDER_HAZE	Lavender Haze	light	#f2eef9	#f8f5fc	#fcfaff	#f2eff5	#e8e2f0	#9b94a5	#30253e	#594965	#63458b	#36624e	#e7e0f0	#255d88	#775015	#923449
+SOLARIS	Solaris	light	#f8f2dd	#fcf7e6	#fffbed	#f5f1e3	#efe5cf	#9e9888	#312b1f	#5b503b	#855009	#436337	#efe5cc	#255d88	#775015	#923449
