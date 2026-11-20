@@ -4,14 +4,14 @@ An offline-first academic workspace for university professors, with a separate S
 
 **Student Portal — planned GitHub Pages address:** [retinazer21.github.io/ProfessorOS](https://retinazer21.github.io/ProfessorOS/). Hosting is prepared but publication has not been performed by this change.
 
-> Portal authentication and explicit final-grade publishing are implemented. A fictional 72% C grade passed the complete desktop → Supabase → Student Portal workflow with professor/student MFA, student isolation and unpublished-edit privacy. Existing academic preview panels remain fictional. See [acceptance results](docs/PUBLISHING_ACCEPTANCE_REPORT.md), [migration integrity](docs/PUBLICATION_MIGRATION_STATUS.md) and [publishing setup](docs/GRADE_PUBLISHING.md).
+> Portal authentication and explicit final-grade publishing are implemented. A fictional 72% C grade passed the complete desktop → Supabase → Student Portal workflow with professor/student MFA, student isolation and unpublished-edit privacy. The portal reads fictional course and attendance records through the [academic import workflow](docs/ACADEMIC_IMPORT.md). See [acceptance results](docs/PUBLISHING_ACCEPTANCE_REPORT.md), [migration integrity](docs/PUBLICATION_MIGRATION_STATUS.md) and [publishing setup](docs/GRADE_PUBLISHING.md).
 
 ## Features
 
 | Desktop workspace | Student Portal |
 | --- | --- |
 | Courses, academic terms, offerings and enrolled rosters | Responsive Studio Window dashboard and course browsing |
-| Lectures and saved attendance with bulk marking | Course details, grades, attendance and profile previews |
+| Lectures and saved attendance with bulk marking | Authorized course details, published final grades, lecture attendance and account settings |
 | Gradebook, weighted assessments and configurable scales | Supabase password sign-in and managed sessions |
 | Explicit publication of one saved final grade using professor MFA | Published snapshots visible only to authorized users |
 | Question bank, exam generation and saved exam snapshots | Required authenticator TOTP enrollment and verification |

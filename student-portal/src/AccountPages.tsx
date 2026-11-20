@@ -80,8 +80,8 @@ export function Profile({ focusAppearance }: { focusAppearance: boolean }) {
                         <div>
                             <h2>Built for a clear boundary</h2>
                             <p>
-                                Preview panels contain fictional academic data.
-                                Published grades are loaded separately from the secure portal after MFA.
+                                Your role and enrollments determine which academic records you can see.
+                                Grades appear after your professor publishes them.
                             </p>
                         </div>
                     </Panel>

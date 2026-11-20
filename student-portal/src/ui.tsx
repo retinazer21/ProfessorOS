@@ -19,7 +19,7 @@ import {
     X,
     type LucideIcon,
 } from "lucide-react";
-import type { Course } from "./demo";
+import { courseMeta, type Course } from "./academic";
 import { CourseArtwork } from "./CourseArtwork";
 
 export const nav: { label: string; href: string; icon: LucideIcon }[] = [
@@ -335,7 +335,7 @@ export function Ring({
 
 export function CourseArt({ course }: { course: Course }) {
     return (
-        <div className={`course-art art-${course.color}`} aria-hidden="true">
+        <div className={`course-art art-violet`} aria-hidden="true">
             <CourseArtwork course={course} />
         </div>
     );
@@ -343,7 +343,7 @@ export function CourseArt({ course }: { course: Course }) {
 export function CourseCard({ course, order = 0 }: { course: Course; order?: number }) {
     const reduceMotion = useMotionPreference();
     return (
-        <motion.article className={`course-card course-tone-${course.color}`}
+        <motion.article className={`course-card course-tone-violet`}
             initial={reduceMotion ? false : { opacity: 0.5, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -353,20 +353,13 @@ export function CourseCard({ course, order = 0 }: { course: Course; order?: numb
                 <div className="flex items-center justify-between gap-3">
                     <span className="course-code">{course.code}</span>
                     <span className="course-credits">
-                        {course.credits} credits
+                        {course.credits !== null && course.credits + " credits"}
                     </span>
                 </div>
                 <h3>
                     <a href={`#/courses/${course.id}`}>{course.title}</a>
                 </h3>
-                <p>{course.instructor}</p>
-                <div className="course-progress">
-                    <div className="flex items-center justify-between">
-                        <span>Course progress</span>
-                        <strong>{course.progress}%</strong>
-                    </div>
-                    <Meter value={course.progress} color={course.color} />
-                </div>
+                <p>{courseMeta(course)}</p>
                 <a className="course-open" href={`#/courses/${course.id}`}>
                     View course <ArrowRight size={16} />
                 </a>

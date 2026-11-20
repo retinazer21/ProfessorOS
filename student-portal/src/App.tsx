@@ -2,7 +2,6 @@ import { useMotionPreference } from './appearance';
 import { useAuth } from './auth/AuthProvider';
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { courses } from "./demo";
 import { isCurrentRoute, nav, Sidebar, Topbar } from "./ui";
 import {
     Attendance,
@@ -59,9 +58,7 @@ export default function App() {
     if (access.stage === 'loading' && !workspaceOpened) return <div className="auth-page"><div className="auth-center" role="status">Checking secure access…</div></div>;
     if (access.stage === 'login' || access.stage === 'mfa') return <AuthScreen key={access.stage} mfa={access.stage === 'mfa'} />;
     if (access.stage === 'denied') return <div className="auth-page"><div className="auth-center"><h1>Access unavailable</h1><p role="alert">{error || 'Your university has not assigned portal access. Contact your administrator.'}</p><button className="button-secondary" onClick={() => void refresh()}>Retry</button><button className="button-primary" onClick={() => void logout()}>Sign out</button></div></div>;
-    const detail = route.startsWith("/courses/")
-        ? courses.find((c) => c.id === route.slice("/courses/".length))
-        : undefined;
+    const detail = route.startsWith("/courses/") ? route.slice("/courses/".length) : undefined;
     return (
         <div className={route === "/dashboard" ? "app-shell studio-shell" : "app-shell"}>
             <button
@@ -83,14 +80,7 @@ export default function App() {
                     openMenu={() => setMenuOpen(true)}
                 />
                 <main id="main-content" className="page-content" tabIndex={-1}>
-                    <div className={route === "/dashboard" ? "sr-only" : "demo-notice"}>
-                        <span className="demo-notice-dot" />
-                        <span>
-                            Preview panels contain fictional names, grades and schedules.
-                            Published grades are shown separately from these previews.
-                        </span>
-                    </div>
-                    {access.stage === 'ready' ? <AnimatePresence mode="wait">
+                    {access.stage === 'ready' ? <AnimatePresence key={access.email + "/" + access.role} mode="wait">
                     <motion.div key={route} ref={resetRouteScroll} className="route-view"
                         initial={reduceMotion ? false : { opacity: 0.4, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -104,7 +94,7 @@ export default function App() {
                     ) : route === "/courses" ? (
                         <Courses />
                     ) : detail ? (
-                        <CourseDetail course={detail} />
+                        <CourseDetail id={detail} />
                     ) : route === "/grades" ? (
                         <Grades />
                     ) : route === "/attendance" ? (

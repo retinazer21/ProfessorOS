@@ -1,15 +1,10 @@
-import type { Course } from "./demo";
+import type { Course } from "./academic";
 import courseArtwork from "./assets/studio-courses.jpg";
 
-const artworkPosition: Record<string, [number, number]> = {
-    "human-computer-interaction": [0, 0],
-    "data-structures": [960, 0],
-    "visual-computing": [0, 480],
-    "research-methods": [960, 480],
-};
+const artworkPosition = [[0, 0], [960, 0], [0, 480], [960, 480]];
 
 export function CourseArtwork({ course, className = "" }: { course: Course; className?: string }) {
-    const position = artworkPosition[course.id];
+    const position = artworkPosition[parseInt(course.id.slice(0, 2), 16) % artworkPosition.length];
     if (!position) return null;
     const [x, y] = position;
     return (

@@ -1,6 +1,6 @@
 # Professor OS Student Portal
 
-The Student Portal retains its Studio Window UI and fictional academic previews, with real Supabase password authentication, sessions, required TOTP MFA, and database-level RBAC/RLS. See [Auth setup and verification](AUTH_SETUP.md) for configuration, provisioning, applied migration and remaining prerequisites.
+The Student Portal retains its Studio Window UI and reads authorized fictional academic records from Supabase, with managed password authentication, sessions, required TOTP MFA, and database-level RBAC/RLS. See [Auth setup and verification](AUTH_SETUP.md) for configuration, provisioning, applied migration and remaining prerequisites.
 
 ## Appearance
 
@@ -35,9 +35,9 @@ Intended URL: [retinazer21.github.io/ProfessorOS](https://retinazer21.github.io/
 
 ## Scope
 
-React, TypeScript, Vite, Tailwind CSS and Lucide icons power this self-contained frontend. Fictional data lives in `src/demo.ts`; routes use URL hashes so every prototype screen can be opened directly without a router dependency. Desktop code and SQLite data remain separate. Supabase manages authentication and the new portal access tables. Academic displays remain fictional.
+The dashboard and academic pages read authorized course, lecture and attendance projections from Supabase. Hash routes support direct links. Academic data comes from the verified desktop snapshot and explicit account bindings. See the [academic import runbook](../docs/ACADEMIC_IMPORT.md).
 
-The Grades page has a separate authenticated Published grades section. The additive migration, lossless integrity checks, live rollback-only RLS tests and actual desktop-to-student publishing acceptance passed using fictional accounts. Student A sees its 72% C snapshot; Student B cannot read it. Local desktop saves do not publish automatically. See [acceptance results](../docs/PUBLISHING_ACCEPTANCE_REPORT.md) and [publishing setup](../docs/GRADE_PUBLISHING.md). Other academic views remain fictional previews.
+The Grades page has a separate authenticated Published grades section. The additive migration, lossless integrity checks, live rollback-only RLS tests and actual desktop-to-student publishing acceptance passed using fictional accounts. Student A sees its 72% C snapshot; Student B cannot read it. Local desktop saves do not publish automatically. See [acceptance results](../docs/PUBLISHING_ACCEPTANCE_REPORT.md) and [publishing setup](../docs/GRADE_PUBLISHING.md).
 
 ## Design and motion
 

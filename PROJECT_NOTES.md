@@ -1005,3 +1005,7 @@ Final lossless server-hash comparison preserved original data, both migration ro
 ## Shared desktop and portal appearance
 
 Both clients read the ten palettes from `src/main/resources/appearance.tsv`. Compose resolves colors through its composition locals and packages the catalog in the backend JAR. Vite embeds the same catalog at build time. The two clients retain their existing Manrope typography, layout and navigation. Light and Dark preference IDs remain compatible with saved desktop settings. Theme, accent and motion are device-local and independent of academic storage and authentication. Windows animation settings are read on window focus changes. Browser media queries handle system color and motion changes.
+
+## Fictional desktop academic import
+
+The administrator imports a verified SQLite snapshot into a private PostgreSQL roster schema. Stable UUIDs preserve local relationships independently of Auth. Explicit bindings project active enrollments into the original access and publishing tables. Read functions enforce the existing session, MFA and assignment checks. The portal reads these projections for courses, lectures and attendance. Desktop drafts and exam material stay local. See [the import runbook](docs/ACADEMIC_IMPORT.md).

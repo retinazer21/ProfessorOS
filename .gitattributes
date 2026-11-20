@@ -17,3 +17,6 @@ gradlew text eol=lf
 *.jpg binary
 *.pdf binary
 *.xlsx binary
+
+# Preserve the exact bytes recorded for this applied and checksum-verified migration.
+student-portal/supabase/migrations/202611200002_academic_import.sql -text !eol
