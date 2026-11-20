@@ -14,7 +14,12 @@ import kotlinx.coroutines.*
 
 @Composable
 internal fun OnlineAttendance(client: PortalPublishingClient, recovered: MutableMap<UUID,Map<RegisterKey,PendingMark>>,
-                              stateChanged:(Boolean)->Unit, logout:()->Unit) {
+                              stateChanged:(Boolean)->Unit, logout:()->Unit) =
+    OnlineAttendance(client,recovered,stateChanged,null,logout)
+
+@Composable
+internal fun OnlineAttendance(client: PortalPublishingClient, recovered: MutableMap<UUID,Map<RegisterKey,PendingMark>>,
+                              stateChanged:(Boolean)->Unit, openWorkspace:(()->Unit)?, logout:()->Unit) {
     val scope = rememberCoroutineScope()
     var catalog by remember {mutableStateOf(emptyList<Offering>())}
     var selected by remember {mutableStateOf<Offering?>(null)}
@@ -86,6 +91,7 @@ internal fun OnlineAttendance(client: PortalPublishingClient, recovered: Mutable
         Column(Modifier.fillMaxSize().padding(if(maxWidth<720.dp)12.dp else 24.dp), verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Copy("Attendance",26,weight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
+                openWorkspace?.let { Action("Academic workspace",quiet=true,enabled=!busy,onClick=it) }
                 Action("Refresh","refresh",enabled=!busy){load(selected,true)}
                 Action("Sign out",quiet=true,enabled=!busy,onClick=logout)
             }

@@ -1,5 +1,7 @@
 # Interactive authentication acceptance test — completed
 
+This runbook records the original acceptance exercise. Its professor fixture was retired after the ownership transfer. Use the current professor account for the desktop checks described in the [online migration guide](../../docs/DESKTOP_ONLINE_MIGRATION.md).
+
 Use only these fictional accounts in the Supabase Auth dashboard (Auto confirm enabled):
 
 - professor-os-e2e-student-a@example.invalid

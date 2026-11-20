@@ -11,13 +11,20 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 /** Explicit Java service composition, shared with isolated desktop tests. No persistence rules here. */
-class WorkspaceServices(path: Path) {
-    private val database = Database(path)
+class WorkspaceServices(private val database: Database, val cloudWrites: CloudAcademicWrites? = null,
+                        val cloudClient: PortalPublishingClient? = null,
+                        private val reloadCloud: (() -> Unit)? = null) {
+    constructor(path: Path) : this(Database(path))
+    val readOnlyCloud get() = reloadCloud != null
     val academic = AcademicServices.create(database)
     val courses = CourseService(CourseRepository(database))
     val dashboard = DashboardService(academic)
     private var initialized = false
-    @Synchronized fun initialize() {
+    @Synchronized fun initialize(refreshGlobal: Boolean = true) {
+        if (reloadCloud != null) {
+            if (refreshGlobal) reloadCloud.invoke()
+            return
+        }
         if (!initialized) {
             database.initialize()
             initialized = true // Failed initialization remains retryable; startup always verifies migrations.
@@ -132,7 +139,7 @@ class WorkspaceController(val services: WorkspaceServices, private val scope: Co
     private fun reload(id: Long?, refreshGlobal: Boolean = true, accepted: () -> Unit = {}) {
         loadingRequest = true
         loadError = null
-        task({ services.initialize(); load(id, refreshGlobal) }) { apply(it); accepted() }
+        task({ services.initialize(refreshGlobal); load(id, refreshGlobal) }) { apply(it); accepted() }
     }
     fun select(id: Long?) = select(id) {}
     internal fun select(id: Long?, accepted: () -> Unit) {
@@ -149,7 +156,17 @@ class WorkspaceController(val services: WorkspaceServices, private val scope: Co
             reload(id, refreshGlobal = snapshot == null || (id != null && catalog.offerings.none { it.offering().id() == id }), accepted = accepted)
         }
     }
-    fun mutate(committed: () -> Unit = {}, operation: () -> Unit) = task({
+    fun mutate(committed: () -> Unit = {}, operation: () -> Unit) = mutateAndReload(committed) {
+        if (services.readOnlyCloud) throw DomainValidationException("This academic view is read-only. Your edits have not been saved.")
+        operation()
+    }
+    fun mutateAcademic(committed: () -> Unit = {}, operation: (WorkspaceServices) -> Unit) = mutateAndReload(committed) {
+        val remote = services.cloudWrites
+        if (remote != null) remote.save { operation(WorkspaceServices(it)) }
+        else if (services.readOnlyCloud) throw DomainValidationException("The online catalog is read-only.")
+        else operation(services)
+    }
+    private fun mutateAndReload(committed: () -> Unit, operation: () -> Unit) = task({
         operation()
         // A committed write must never be reported as an unsaved edit if a subsequent read fails.
         try {load(offeringId)} catch(failure:Exception) {
@@ -160,7 +177,12 @@ class WorkspaceController(val services: WorkspaceServices, private val scope: Co
         if(it!=null)apply(it) else error="Saved successfully, but the list could not refresh. Use Refresh; do not create the record again."
         form=null;examDraft=null;questionDraft=null;changed()
     }
-    fun saveForm() { val current=form?.snapshot() ?: return; mutate { current.save() } }
+    fun saveForm() {
+        val current=form?.snapshot() ?: return
+        val academicWriter=current.academicWriter
+        if (academicWriter != null) mutateAcademic { academicWriter(it,current) }
+        else mutate { current.save() }
+    }
     fun guard(includeSheets:Boolean=true, action: () -> Unit) {
         if(busy) return
         fun proceed() {
@@ -176,7 +198,7 @@ class WorkspaceController(val services: WorkspaceServices, private val scope: Co
         val editor=gradebook ?: return
         if(!editor.dirty)return
         val entries=editor.changes()
-        mutate(committed={gradebook=null}) { services.academic.grades().saveGrades(editor.book.offeringId(),entries) }
+        mutateAcademic(committed={gradebook=null}) { it.academic.grades().saveGrades(editor.book.offeringId(),entries) }
     }
     fun chooseAttendanceLecture(id:Long) {
         if(busy || attendance?.lectureId==id)return

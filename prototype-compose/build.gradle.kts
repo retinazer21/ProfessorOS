@@ -73,10 +73,36 @@ tasks.withType<AbstractJPackageTask>().configureEach {
 
 tasks.register<JavaExec>("runOnline") {
     group = "application"
-    description = "Open the authenticated Supabase desktop during staged cutover"
+    description = "Open the authenticated Professor OS desktop"
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass.set("com.professoros.compose.OnlineDesktopLauncher")
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+tasks.register<JavaExec>("runRecovery") {
+    group = "application"
+    description = "Open the local SQLite recovery workspace"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("com.professoros.compose.RecoveryDesktopLauncher")
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+tasks.withType<JavaExec>().matching { it.name in setOf("run","runOnline") }.configureEach {
+    val portalSettings = rootDir.parentFile.resolve("student-portal/.env.local")
+    doFirst {
+        if (portalSettings.isFile) {
+            val settings = portalSettings.readLines().mapNotNull { line ->
+                val fields = line.split('=',limit=2)
+                fields.takeIf { it.size==2 }?.let { it[0].trim() to it[1].trim().trim('"','\'') }
+            }.toMap()
+            for (name in listOf("SUPABASE_URL","SUPABASE_PUBLISHABLE_KEY")) {
+                val desktopKey = "PROFESSOR_OS_$name"
+                val portalValue = settings["VITE_$name"]
+                if (environment[desktopKey]?.toString().isNullOrBlank() && !portalValue.isNullOrBlank())
+                    environment(desktopKey,portalValue)
+            }
+        }
+    }
 }
 
 // Launch Java directly in a terminal so the opt-in live check can read its password without echo.

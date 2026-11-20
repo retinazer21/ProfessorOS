@@ -11,10 +11,10 @@ class AttendanceEditor(val book:AttendanceBook,previousLecture:Long?=null) {
     var lectureId by mutableStateOf(book.lectures().find {it.id()==previousLecture}?.id()?:book.lectures().firstOrNull()?.id());private set
     internal val sheet=AttendanceSheetEditor(AttendanceSheet(
         book.students().map { RegisterStudent(localId(it.enrollment().id()),it.student().fullName(),it.student().studentNumber(),it.enrollment().status()!=EnrollmentStatus.WITHDRAWN) },
-        book.lectures().map { RegisterLecture(localId(it.id()),it.title(),it.plannedDate().toString(),it.status()!=LectureStatus.CANCELLED) },
+        book.lectures().map { RegisterLecture(localId(it.id()),it.title(),it.plannedDate().toString(),it.status().acceptsAttendance()) },
         book.records().map { RegisterCell(localId(it.enrollmentId()),localId(it.lectureId()),it.status().name) },true))
     val lecture get()=book.lectures().find {it.id()==lectureId}
-    val readOnly get()=lecture==null || lecture?.status()==LectureStatus.CANCELLED
+    val readOnly get()=lecture?.status()?.acceptsAttendance()!=true
     val dirty get()=sheet.edits.isNotEmpty()
     fun value(enrollment:Long)=lectureId?.let {sheet.value(RegisterKey(localId(enrollment),localId(it)))}
     fun set(enrollment:Long,status:AttendanceStatus?) {lectureId?.let { sheet.change(RegisterKey(localId(enrollment),localId(it)),status) }}

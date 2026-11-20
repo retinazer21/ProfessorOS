@@ -20,3 +20,8 @@ gradlew text eol=lf
 
 # Preserve the exact bytes recorded for this applied and checksum-verified migration.
 student-portal/supabase/migrations/202611200002_academic_import.sql -text !eol
+student-portal/supabase/migrations/202611200004_private_desktop_domains.sql -text !eol
+student-portal/supabase/migrations/202611200011_catalog_writes.sql -text !eol
+student-portal/supabase/migrations/202611200012_roster_writes.sql -text !eol
+student-portal/supabase/migrations/202611200013_gradebook_writes.sql -text !eol
+student-portal/supabase/migrations/202611200014_exam_writes.sql -text !eol

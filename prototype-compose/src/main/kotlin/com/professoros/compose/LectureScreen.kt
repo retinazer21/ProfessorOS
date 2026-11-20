@@ -11,13 +11,13 @@ import com.professoros.model.*
 
 internal fun WorkspaceController.editLecture(existing:Lecture?=null) {
     val scope=offeringId ?: return
-    form=RecordForm(if(existing==null)"New lecture" else "Edit lecture",listOf(
+    form=academicForm(if(existing==null)"New lecture" else "Edit lecture",listOf(
         Field("number","Lecture number *",existing?.lectureNumber()?.toString().orEmpty()),Field("title","Title *",existing?.title().orEmpty()),
         Field("date","Planned date * (yyyy-MM-dd)",existing?.plannedDate()?.toString().orEmpty()),
         Field("duration","Duration in minutes *",existing?.durationMinutes()?.toString()?:"60"),
         Field("status","Status",existing?.status()?.name?:"PLANNED",choices=options(LectureStatus.entries)),
         Field("topics","Topics",existing?.topics().orEmpty(),true),Field("description","Description",existing?.description().orEmpty(),true),
-        Field("notes","Professor notes",existing?.professorNotes().orEmpty(),true))) { f->
+        Field("notes","Professor notes",existing?.professorNotes().orEmpty(),true))) { services,f->
         val input=LectureInput(f.number("number"),f["title"],f.date("date"),f["topics"],f["description"],f.number("duration"),LectureStatus.valueOf(f["status"]),f["notes"])
         if(existing==null)services.academic.lectures().create(scope,input) else services.academic.lectures().update(scope,existing.id(),input)
     }
@@ -44,7 +44,7 @@ internal fun WorkspaceController.editLecture(existing:Lecture?=null) {
             Action("New lecture","book",variant=ActionVariant.PRIMARY,enabled=!c.busy,modifier=Modifier.testTag("new-lecture")){c.editLecture()}
             Action("Edit",enabled=row!=null&&!c.busy){row?.let {c.editLecture(it)}}
             Action("Details",enabled=row!=null){row?.let {c.detail=Detail("${it.lectureNumber()}. ${it.title()}","${it.plannedDate()} · ${it.durationMinutes()} minutes · ${it.status()}\n\nTopics\n${it.topics()}\n\nDescription\n${it.description()}\n\nProfessor notes\n${it.professorNotes()}\n\nUpdated: ${it.updatedAt()}")}}
-            Action("Delete",variant=ActionVariant.DESTRUCTIVE,enabled=row!=null&&!c.busy){row?.let {c.confirm("Delete lecture ${it.lectureNumber()}?",it.title()+"\nThis cannot be undone. Existing attendance history is protected."){c.mutate {c.services.academic.lectures().delete(scope,it.id())}}}}
+            Action("Delete",variant=ActionVariant.DESTRUCTIVE,enabled=row!=null&&!c.busy){row?.let {c.confirm("Delete lecture ${it.lectureNumber()}?",it.title()+"\nThis cannot be undone. Existing attendance history is protected."){c.mutateAcademic { services -> services.academic.lectures().delete(scope,it.id())}}}}
         }
         RecordTable(overview?.lectures().orEmpty().filter {it.matches(query)&&(status.isEmpty()||it.status().name==status)},listOf(
             TableColumn("No.",.5f){it:Lecture->it.lectureNumber().toString()},TableColumn("Lecture",2f,Lecture::title),

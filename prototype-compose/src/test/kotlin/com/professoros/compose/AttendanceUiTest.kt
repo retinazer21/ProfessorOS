@@ -28,12 +28,12 @@ class AttendanceUiTest {
         val term=a.terms().create(AcademicTermInput("Fall","2026–2027",LocalDate.of(2026,9,1),LocalDate.of(2027,1,1),AcademicStatus.ACTIVE))
         val offering=a.offerings().create(CourseOfferingInput(course.id(),term.id(),"A","",AcademicStatus.ACTIVE))
         val enrollments=listOf(StudentInput("0001","أحمد","علي","",""),StudentInput("0002","Sara","Hassan","",""),StudentInput("0003","Omar","Khalid","","")).map {a.enrollments().enroll(a.students().create(it).id(),offering.id())}
-        a.enrollments().updateStatus(enrollments[2].id(),EnrollmentStatus.WITHDRAWN)
-        val lectures=(1..4).map {a.lectures().create(offering.id(),lectureInput(it,LectureStatus.PLANNED))}
+        val lectures=(1..4).map {a.lectures().create(offering.id(),lectureInput(it,LectureStatus.COMPLETED))}
         a.attendance().save(offering.id(),lectures[0].id(),mapOf(enrollments[0].id() to AttendanceStatus.PRESENT,enrollments[1].id() to AttendanceStatus.ABSENT,enrollments[2].id() to AttendanceStatus.ABSENT))
         a.attendance().save(offering.id(),lectures[1].id(),mapOf(enrollments[0].id() to AttendanceStatus.LATE,enrollments[1].id() to AttendanceStatus.EXCUSED))
         a.attendance().save(offering.id(),lectures[2].id(),mapOf(enrollments[0].id() to AttendanceStatus.ABSENT))
         a.lectures().update(offering.id(),lectures[2].id(),lectureInput(3,LectureStatus.CANCELLED))
+        a.enrollments().updateStatus(enrollments[2].id(),EnrollmentStatus.WITHDRAWN)
         return s to offering.id()
     }
     private fun lectureInput(number:Int,status:LectureStatus)=LectureInput(number,"Session $number",LocalDate.of(2026,10,number),"Objects","",60,status,"")

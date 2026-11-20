@@ -6,9 +6,9 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.*;
 
-final class PdfImages {
+public final class PdfImages {
     private PdfImages() { }
-    static BufferedImage read(String path,String label) throws IOException {
+    public static BufferedImage read(String path,String label) throws IOException {
         Path file;
         try { file=Path.of(path); } catch(InvalidPathException invalid) { throw new DomainValidationException(label+" path is invalid."); }
         if(!file.isAbsolute() || !Files.isRegularFile(file)) {

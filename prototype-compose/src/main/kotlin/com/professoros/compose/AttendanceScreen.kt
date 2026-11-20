@@ -94,7 +94,7 @@ import kotlinx.coroutines.launch
                 Action("Policy", "question") { c.detail=Detail("Attendance policy",AttendanceCalculator.POLICY+"\nWithdrawn enrollments excluded. Save changes to update percentages and history.") }
                 Action("Student history","calendar",enabled=row!=null&&!c.busy,modifier=Modifier.testTag("attendance-history")){row?.let {c.detail=Detail("Attendance history · ${it.student().fullName()}",editor.history(it))}}
             }
-            if(editor.readOnly)Copy("Cancelled lecture · History is read-only and excluded from summaries.",13,Ink.violet,modifier=Modifier.testTag("attendance-readonly"))
+            if(editor.readOnly)Copy("Attendance is read-only until this lecture is completed or partially completed.",13,Ink.violet,modifier=Modifier.testTag("attendance-readonly"))
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Input("Search student number or name",query,{query=it},Modifier.weight(2f),tag="attendance-search")
                 Column(Modifier.weight(1f)){Select("Sort roster",sort,listOf(Choice("number","Student number"),Choice("name","Student name")),{sort=it})}

@@ -84,7 +84,7 @@ internal fun WorkspaceController.confirmStudentImport() {
     if(busy||preview.actionable()==0L)return
     confirm("Import reviewed valid rows?","${preview.actionable()} students/enrollments will be imported into ${editor.destination}. Invalid rows are excluded; existing student profiles are never overwritten.") {
         var result:StudentImportResult?=null
-        mutate(committed={editor.reviewed=null;editor.result=result}) {result=services.academic.imports().confirm(preview)}
+        mutateAcademic(committed={editor.reviewed=null;editor.result=result}) { result=it.academic.imports().confirm(preview) }
     }
 }
 internal fun WorkspaceController.openPdf(examId:Long) {

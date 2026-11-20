@@ -18,8 +18,11 @@ fun onlineDesktop() = application {
     var busy by remember {mutableStateOf(false)}
     var failure by remember {mutableStateOf<String?>(null)}
     var registerBusy by remember { mutableStateOf(false) }
+    var academicCloseGuard by remember { mutableStateOf<((() -> Unit) -> Unit)?>(null) }
     val drafts=remember {mutableStateMapOf<java.util.UUID,Map<RegisterKey,PendingMark>>()}
     val pending=drafts.values.sumOf {it.size}
+    val width = System.getProperty("professoros.preview.width")?.toIntOrNull()?.coerceIn(880,3840) ?: 1360
+    val height = System.getProperty("professoros.preview.height")?.toIntOrNull()?.coerceIn(660,2160) ?: 860
     var draftOwner by remember {mutableStateOf<java.util.UUID?>(null)}
     var exitAfterDiscard by remember { mutableStateOf<Boolean?>(null) }
     fun logout(close:Boolean,retainDrafts:Boolean=false) {
@@ -41,8 +44,15 @@ fun onlineDesktop() = application {
             if(pending>0) exitAfterDiscard=close else logout(close)
         }
     }
-    Window(onCloseRequest={requestExit(true)},title="Professor OS",icon=painterResource("icons/professor-os-256.png"),
-        state=rememberWindowState(width=1120.dp,height=790.dp)) {
+    Window(onCloseRequest={
+        val guard = academicCloseGuard
+        if (guard == null) requestExit(true) else guard { requestExit(true) }
+    },title="Professor OS",icon=painterResource("icons/professor-os-256.png"),
+    state=rememberWindowState(width=width.dp,height=height.dp)) {
+        DisposableEffect(window) {
+            window.minimumSize = java.awt.Dimension(880,660)
+            onDispose {}
+        }
         val active=session
         val focused=LocalWindowInfo.current.isWindowFocused
         CompositionLocalProvider(LocalPalette provides workspacePalette(settings.mode,isSystemInDarkTheme(),settings.accent),
@@ -75,7 +85,11 @@ fun onlineDesktop() = application {
                         delay(30_000)
                     }
                 }
-                key(active){OnlineAttendance(active,drafts,{working->registerBusy=working}){requestExit(false)}}
+                key(active) {
+                    var browsing by remember { mutableStateOf(drafts.isEmpty()) }
+                    if (browsing) OnlineAcademicWorkspace(active,settings,{academicCloseGuard=it},{browsing=false}) {requestExit(false)}
+                    else OnlineAttendance(active,drafts,{working->registerBusy=working},{browsing=true}) {requestExit(false)}
+                }
             }
             exitAfterDiscard?.let { close ->
                     Modal("Discard unsaved attendance?",{exitAfterDiscard=null},footer={

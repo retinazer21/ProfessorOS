@@ -23,6 +23,38 @@ internal class QueuedIo : CoroutineDispatcher() {
 class WorkspaceLoadingTest {
     @get:Rule val folder = TemporaryFolder()
 
+    @Test fun cloudReaderRetainsViewOnNetworkFailureAndNeverAcknowledgesLocalEdits() {
+        val path = folder.root.toPath().resolve("isolated-test.db")
+        fixture(path)
+        var disconnected = false
+        val services = WorkspaceServices(com.professoros.database.Database(path)) {
+            if (disconnected) throw java.io.IOException("Disconnected")
+        }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        val io = QueuedIo()
+        try {
+            val controller = WorkspaceController(services, scope, io)
+            controller.refresh()
+            io.drain()
+            val original = assertNotNull(controller.snapshot)
+            disconnected = true
+            controller.refresh()
+            io.drain()
+            assertNotNull(controller.loadError)
+            assertSame(original, controller.snapshot)
+            var acknowledged = false
+            var attempted = false
+            controller.mutate(committed = { acknowledged = true }) { attempted = true }
+            io.drain()
+            assertFalse(attempted)
+            assertFalse(acknowledged)
+            disconnected = false
+            controller.refresh()
+            io.drain()
+            assertNull(controller.loadError)
+        } finally { scope.cancel() }
+    }
+
     @Test fun selectionRequestedDuringLoadIsNotLost() {
         val path = folder.root.toPath().resolve("selection.db")
         fixture(path)

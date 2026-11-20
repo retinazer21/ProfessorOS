@@ -2,7 +2,7 @@
 
 ## Audited baseline (November 20, 2026)
 
-The installed SQLite workspace has ten applied migrations. Its backup passed a schema and row comparison, integrity_check and foreign_key_check. The verified SHA-256 is 72d6ea6dcca931ff02a3bb5fab53146bd038d61c4e201f67da7f661cf06c1d1b. Keep the backup outside Git. The desktop currently constructs WorkspaceServices from AppPaths.databaseFile at startup. Transactions and validation run through JDBC, including bulk attendance, grading and exam finalization. PDF and Excel use these services as readers. PortalPublishingClient already performs password login, verified TOTP and portal_access authorization.
+The installed SQLite workspace had ten applied migrations at the start of the cutover. Its backup passed a schema and row comparison, integrity_check and foreign_key_check. The verified SHA-256 is 72d6ea6dcca931ff02a3bb5fab53146bd038d61c4e201f67da7f661cf06c1d1b. Keep the backup outside Git.
 
 | Domain | SQLite rows | Supabase representation before cutover |
 | --- | ---: | --- |
@@ -28,7 +28,7 @@ Hosted inventory is based on the preceding verified import. Recheck the live sch
 
 ## Current implementation
 
-The development launcher `prototype-compose/gradlew -p prototype-compose runOnline` opens the native professor sign-in screen. Supply the project origin and publishable key through `PROFESSOR_OS_SUPABASE_URL` and `PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY`. Enroll the professor’s authenticator through the portal first. The desktop keeps the managed session in memory for the lifetime of the window.
+The standard Gradle `run` task and the `runOnline` alias open the native professor sign-in screen. Supply the project origin and publishable key through `PROFESSOR_OS_SUPABASE_URL` and `PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY`, or reuse the corresponding `VITE_` entries in the portal’s local development configuration. Enroll the professor’s authenticator through the portal first. The desktop keeps the managed session in memory for the lifetime of the window. Choose `runRecovery` to open the local SQLite workspace explicitly.
 
 Migration `202611200003` is installed in the hosted project. Lecture view and Matrix view share pending edits by enrollment and lecture ID. Select the teaching context, search for a student, then click a mark or type P, A, L, E or U while focused on the cell. Select a matrix column heading to open that lecture. Save attendance (Ctrl+S) saves the pending edits in the current offering, including edits hidden by a filter. Normal window close and sign-out ask before discarding edits. Unexpected process termination loses in-memory drafts.
 
@@ -40,7 +40,7 @@ Set the public project configuration described above. From a private interactive
 
 ```powershell
 .\prototype-compose\gradlew.bat -p prototype-compose prepareAttendanceReadCheck
-java '@prototype-compose/build/attendance-read-check.args' 'professor-os-e2e-professor@example.invalid'
+java '@prototype-compose/build/attendance-read-check.args' 'professor01@example.com'
 ```
 
 The November 20 read-only check rendered both views for CS201 and CS202. Each returned 35 students, 12 lectures and 420 recorded marks. Student A’s 12 rows matched before and after a Brave refresh. Before installing the sheet migration, a restore rehearsal covered explicit clears, batch rollback and stale writes. An independent hosted read after installation verified both function definitions and grants, the four earlier migrations, all 15 existing policies and the original academic data.
@@ -53,6 +53,14 @@ Hosted migration `202611200007_attendance_conflict.sql` changes that rejection t
 
 In the live check, the MFA-verified professor changed one fictional CS201 mark from Late to Absent. A two-cell desktop batch based on the old mark received one HTTP 409. PostgreSQL logged one rejection, both drafts stayed pending, and refresh identified the changed cell. The hosted Student Portal in Brave showed Absent and then Late after the professor restored the mark. The final comparison matched all 840 original marks, the other academic rows, the 15 existing policies and the earlier migration history. The broader private workspace migrations were outside this rollout.
 
-Migration `202611200004` and the administrator backfill have been exercised on a local copy. The backfill reads a checksum-verified fictional SQLite backup, preserves the existing UUIDs, and compares every staged private table in both directions. The locally tested `202611200005` read function reconstructs the original 16 academic tables for the MFA-verified workspace owner. The integration test compares every returned column of every row against the SQLite snapshot. Reassigning an imported offering disables this single-owner view. Windows image references require a separate storage migration if populated. Keep generated backfill SQL private because it contains recoverable grade and exam data.
+Migrations `202611200004`, `202611200005` and `202611200008` are installed on the hosted project. The administrator backfill preserved the existing UUIDs and checked both directions against the recovery snapshot. The MFA-verified workspace owner can read all 16 academic tables through `desktop_read_workspace`. All fields matched the SQLite snapshot. Reassigning an imported offering disables this single-owner view. Windows image references require a separate storage migration if populated. Keep generated backfill SQL private because it contains recoverable grade and exam data.
 
-The standard launcher still opens the original SQLite workspace. Cloud editing for the catalog, roster, lecture plans, assessments, draft grades, question bank and exams remains pending. Existing PDF and Excel workflows use that local workspace. Grade publication remains a separate action. The recovery backup should be retained through the remaining cutover.
+Hosted migration `202611200009_attendance_eligibility.sql` applies the same locked eligibility check to the scalar and batch attendance endpoints. Both preserve marks for withdrawn students and allow changes only for completed or partially completed lectures in the assigned offering. The desktop services can load the 16-table response into a session-local in-memory database. That read model is separate from the protected recovery file.
+
+Migrations `011` through `014` add cloud writers for the catalog, lecture plans, roster, gradebook, question bank and exams. The desktop runs its existing Java services against a temporary in-memory draft and sends the validated changes to the assigned professor’s Supabase workspace. The server checks the prior values, validates academic relationships, and returns the committed workspace. Failed writes preserve the pending desktop edits. A timeout can leave the result unknown, so refresh before retrying.
+
+Roster writes preserve published history when enrollment status changes. Draft grades remain private, and explicit publication uses the linked student identity and the reviewed revision. Private exam images use verified content references and a temporary desktop cache. Finalized exams preserve their saved questions and answers. PDF and Excel continue to run locally through the existing Java services.
+
+## Current ownership
+
+On November 20, 2026, the private desktop workspace and all three portal offerings were transferred to `professor01@example.com`. The new professor signed in with MFA, read all 16 academic tables and 840 attendance marks, and created and removed a fictional test course. The retired test account had no remaining ownership references or Storage files and was deleted through Supabase Auth Admin. A final comparison verified the inherited data, RLS policies, and migration history.

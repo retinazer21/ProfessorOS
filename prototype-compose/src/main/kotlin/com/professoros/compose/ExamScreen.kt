@@ -20,7 +20,7 @@ internal fun WorkspaceController.saveExam() {
     if(busy)return
     val draft=examDraft?:return;val input=draft.input();val ids=draft.selected.map {it.questionId()}
     val marks=try {draft.marksForSave()}catch(f:DomainValidationException){error=f.message;return}
-    mutate {services.academic.exams().save(draft.offeringId,draft.existing?.id(),input,ids,marks)}
+    mutateAcademic { it.academic.exams().save(draft.offeringId,draft.existing?.id(),input,ids,marks)}
 }
 
 @Composable internal fun ExamScreen(c:WorkspaceController) {
@@ -40,9 +40,9 @@ internal fun WorkspaceController.saveExam() {
                 "${saved.title()} · ${saved.status()}\n${saved.date()} · ${saved.durationMinutes()} minutes\nCalculated ${saved.calculatedMarks()} / intended ${saved.intendedMarks()} marks${if(saved.marksDiffer())" · Warning: totals differ" else ""}\n\n${saved.instructions()}\n\n"+
                     saved.questions().joinToString("\n\n──────────\n\n"){"${it.position()}. "+questionDetails(it)}
             }}}
-            Action("Finalize",variant=ActionVariant.WARNING,enabled=draft&&!c.busy){row?.let {c.confirm("Finalize exam?","${it.title()}\nCalculated ${it.calculatedMarks()} / intended ${it.intendedMarks()} marks${if(it.marksDiffer())" — Warning: totals differ." else "."}\nThis locks content and records usage once."){c.mutate {c.services.academic.exams().finalizeExam(scope,it.id())}}}}
-            Action("Archive",variant=ActionVariant.WARNING,enabled=row?.status()==ExamStatus.FINALIZED&&!c.busy){row?.let {c.confirm("Archive exam?",it.title()+"\nIts questions and history will be preserved."){c.mutate {c.services.academic.exams().archive(scope,it.id())}}}}
-            Action("Delete draft",variant=ActionVariant.DESTRUCTIVE,enabled=draft&&!c.busy){row?.let {c.confirm("Delete draft exam?",it.title()+"\nThis permanently deletes the draft and its saved selection."){c.mutate {c.services.academic.exams().delete(scope,it.id())}}}}
+            Action("Finalize",variant=ActionVariant.WARNING,enabled=draft&&!c.busy){row?.let {c.confirm("Finalize exam?","${it.title()}\nCalculated ${it.calculatedMarks()} / intended ${it.intendedMarks()} marks${if(it.marksDiffer())" — Warning: totals differ." else "."}\nThis locks content and records usage once."){c.mutateAcademic { services -> services.academic.exams().finalizeExam(scope,it.id())}}}}
+            Action("Archive",variant=ActionVariant.WARNING,enabled=row?.status()==ExamStatus.FINALIZED&&!c.busy){row?.let {c.confirm("Archive exam?",it.title()+"\nIts questions and history will be preserved."){c.mutateAcademic { services -> services.academic.exams().archive(scope,it.id())}}}}
+            Action("Delete draft",variant=ActionVariant.DESTRUCTIVE,enabled=draft&&!c.busy){row?.let {c.confirm("Delete draft exam?",it.title()+"\nThis permanently deletes the draft and its saved selection."){c.mutateAcademic { services -> services.academic.exams().delete(scope,it.id())}}}}
         }
         RecordTable(c.exams.filter {it.title().contains(query,true)},listOf(TableColumn("Exam",2f,Exam::title),TableColumn("Date"){it.date().toString()},TableColumn("Status"){it.status().name},TableColumn("Marks",1.5f){"${it.calculatedMarks()} / ${it.intendedMarks()}${if(it.marksDiffer())" !" else ""}"},TableColumn("Questions",.7f){it.questions().size.toString()}),Exam::id,selected,{selected=it.id()},{if(it.status()==ExamStatus.DRAFT)c.openExam(it.id())},"exams-table","No exams yet. Create a draft and choose questions from this course's bank.")
         Copy("PDFs use saved exam snapshots. Student papers and answer keys are separate documents.",12,Ink.muted)

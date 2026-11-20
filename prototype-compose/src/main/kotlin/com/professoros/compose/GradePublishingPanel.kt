@@ -10,61 +10,129 @@ import kotlinx.coroutines.*
 import java.util.UUID
 import java.util.logging.Logger
 
-/** Optional, explicit online action; existing local save operations remain unchanged. */
+private data class PublicationReview(
+    val pending: GradePublication,
+    val published: PortalPublishingClient.PublishedGrade?
+)
+
 @Composable internal fun GradePublishingPanel(c:WorkspaceController, editor:GradebookEditor, close:()->Unit) {
-    var enrollment by remember {mutableStateOf("")}
-    var offering by remember {mutableStateOf("")}
-    var student by remember {mutableStateOf("")}
-    var email by remember {mutableStateOf("")}
-    var password by remember {mutableStateOf("")}
-    var code by remember {mutableStateOf("")}
-    var busy by remember {mutableStateOf(false)}
-    var status by remember {mutableStateOf("")}
-    // Credentials are ephemeral; the blocking HTTP operation revokes its session in finally.
+    var enrollment by remember { mutableStateOf("") }
+    var offering by remember { mutableStateOf("") }
+    var student by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    val existingSession = c.services.cloudClient
+    var signedIn by remember { mutableStateOf(existingSession != null) }
+    var busy by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("") }
+    var review by remember { mutableStateOf<PublicationReview?>(null) }
     val scope = rememberCoroutineScope()
+    val client = remember {
+        lazy { existingSession ?: PortalPublishingClient(System.getenv("PROFESSOR_OS_SUPABASE_URL"), System.getenv("PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY")) }
+    }
+    fun signOut() {
+        if (existingSession == null && client.isInitialized()) {
+            try { client.value.signOut() }
+            catch (failure: Exception) {
+                Logger.getLogger("PortalPublishing").warning("Session revocation could not be confirmed: " + failure.javaClass.simpleName)
+            }
+        }
+    }
+    DisposableEffect(client) {
+        onDispose { if (client.isInitialized()) Thread.ofVirtual().start { signOut() } }
+    }
+    fun run(message: String, operation: suspend () -> Unit) {
+        busy = true
+        status = message
+        scope.launch {
+            try { operation() }
+            catch (failure: CancellationException) { throw failure }
+            catch (failure: Exception) {
+                review = null
+                Logger.getLogger("PortalPublishing").warning("Publication operation failed: " + failure.javaClass.simpleName)
+                status = if (failure is DomainValidationException) failure.message.orEmpty()
+                    else "Publication could not be confirmed. Your grade is still pending. Load the current publication before trying again."
+            } finally { busy = false }
+        }
+    }
+    fun loadSaved(selected: Long, targetOffering: UUID, targetStudent: UUID): GradePublication =
+        GradePublication.fromSaved(c.services.academic.grades().load(editor.book.offeringId()), selected, targetOffering, targetStudent)
+
+    val ready = !busy && !c.busy && !editor.dirty && editor.summary().results[enrollment.toLongOrNull()]?.complete() == true
     Panel(Modifier.fillMaxWidth()) {
         Copy("Publish one saved final grade",18)
-        Copy("Use administrator-provided portal IDs for this course and student. Publishing replaces that student's published snapshot; local edits remain private until you publish again.",12,Ink.muted)
-        Select("Local student",enrollment,editor.book.students().map {Choice(it.enrollment().id().toString(),it.student().studentNumber()+" · "+it.student().fullName())},{if(!busy)enrollment=it})
+        Copy(if (existingSession != null) "Review the current publication for this student's linked portal account."
+            else "Enter the portal IDs provided by your administrator. Review the current publication before confirming a replacement.",12,Ink.muted)
+        Select("Local student",enrollment,editor.book.students().map {Choice(it.enrollment().id().toString(),it.student().studentNumber()+" · "+it.student().fullName())},
+            { if (!busy) { enrollment=it; review=null; status="" } })
         editor.summary().results[enrollment.toLongOrNull()]?.let {Copy("Saved result: ${it.weightedPoints()}% · ${it.letter()} · ${it.outcome()}",13)}
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Input("Portal course UUID",offering,{if(!busy)offering=it},Modifier.weight(1f))
-            Input("Portal student UUID",student,{if(!busy)student=it},Modifier.weight(1f))
+        if (existingSession == null) Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            Input("Portal course UUID",offering,{if(!busy){offering=it; review=null; status=""}},Modifier.weight(1f))
+            Input("Portal student UUID",student,{if(!busy){student=it; review=null; status=""}},Modifier.weight(1f))
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        if (!signedIn) Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Input("Professor email",email,{if(!busy)email=it},Modifier.weight(1f))
             Input("Password",password,{if(!busy)password=it},Modifier.weight(1f),secret=true)
             Input("Authenticator code",code,{if(!busy)code=it},Modifier.weight(1f),secret=true)
         }
-        Copy(status,12,Ink.violet)
+        review?.let {
+            Copy(it.published?.let { grade -> "Currently published: ${grade.score()}% · ${grade.letter()}" }
+                ?: "No grade is currently published for this student.",13)
+            Copy("Pending publication: ${it.pending.score()}% · ${it.pending.letter()}",13)
+        }
+        if (status.isNotEmpty()) Copy(status,12,Ink.violet)
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Action("Confirm and publish",enabled=!busy&&!editor.dirty&&!c.busy&&editor.summary().results[enrollment.toLongOrNull()]?.complete()==true) {
-                busy=true; status="Publishing…"
-                val selected=enrollment.toLongOrNull(); val remoteOffering=offering; val remoteStudent=student
-                val login=email; val secret=password; val otp=code
-                password="";code=""
-                scope.launch {
+            Action("Load current publication",enabled=ready) {
+                val selected = requireNotNull(enrollment.toLongOrNull())
+                val targetOffering = offering.trim()
+                val targetStudent = student.trim()
+                val login = email
+                val secret = password
+                val otp = code
+                password = ""; code = ""; review = null
+                run("Loading current publication…") {
+                    var authenticated = false
                     try {
-                        val message=withContext(Dispatchers.IO) {
-                            val saved=c.services.academic.grades().load(editor.book.offeringId())
-                            val publication=GradePublication.fromSaved(saved,selected?:throw DomainValidationException("Choose a student."),UUID.fromString(remoteOffering.trim()),UUID.fromString(remoteStudent.trim()))
-                            val client=PortalPublishingClient(System.getenv("PROFESSOR_OS_SUPABASE_URL"),System.getenv("PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY"))
-                            var published=false
-                            try {client.signIn(login,secret,otp);client.publish(publication);published=true}
-                            finally {
-                                try {client.signOut()} catch(f:Exception) {
-                                    Logger.getLogger("PortalPublishing").warning("Session revocation could not be confirmed: "+f.javaClass.simpleName)
-                                    if(published) throw DomainValidationException("Grade published, but sign-out could not be confirmed. Revoke this session in Supabase.")
-                                }
-                            }
-                            "Published successfully. Repeating the same course/student mapping will not create a duplicate."
+                        val needsSignIn = !signedIn
+                        val loaded = withContext(Dispatchers.IO) {
+                            if (needsSignIn) client.value.signIn(login,secret,otp)
+                            authenticated = true
+                            val pending = if (existingSession != null) {
+                                val target = existingSession.publicationTarget(editor.book.offeringId(),selected)
+                                loadSaved(selected,target.offering(),target.student())
+                            } else try { loadSaved(selected,UUID.fromString(targetOffering),UUID.fromString(targetStudent)) }
+                                catch (failure: IllegalArgumentException) { throw DomainValidationException("Enter valid portal course and student UUIDs.") }
+                            PublicationReview(pending,client.value.currentPublication(pending).orElse(null))
                         }
-                        status=message
-                    } catch(f:Exception) {
-                        if(f is CancellationException) throw f
-                        Logger.getLogger("PortalPublishing").warning("Publishing failed: "+f.javaClass.simpleName)
-                        status=if(f is DomainValidationException)f.message.orEmpty() else "Publication was not confirmed. Check UUID mappings and connectivity; retrying the same mapping is safe."
-                    } finally {busy=false}
+                        signedIn = true
+                        review = loaded
+                        status = "Review the pending grade and confirm to publish."
+                    } catch (failure: Exception) {
+                        if (existingSession == null && (!authenticated || failure !is CancellationException)) {
+                            withContext(NonCancellable + Dispatchers.IO) { signOut() }
+                            signedIn = false
+                        }
+                        throw failure
+                    }
+                }
+            }
+            Action("Confirm and publish",enabled=ready && review!=null) {
+                val reviewed = requireNotNull(review)
+                val selected = requireNotNull(enrollment.toLongOrNull())
+                run("Publishing…") {
+                    withContext(Dispatchers.IO) {
+                        if (existingSession != null) {
+                            val target = existingSession.publicationTarget(editor.book.offeringId(),selected)
+                            if (target.offering()!=reviewed.pending.offering() || target.student()!=reviewed.pending.student())
+                                throw DomainValidationException("The portal account mapping changed. Reload and review the publication.")
+                        }
+                        val current = loadSaved(selected,reviewed.pending.offering(),reviewed.pending.student())
+                        if (current != reviewed.pending) throw DomainValidationException("The saved grade changed. Load the current publication and review the updated grade.")
+                        client.value.publish(reviewed.pending,reviewed.published?.revision())
+                    }
+                    review = null
+                    status = "Published successfully."
                 }
             }
             Action("Close",enabled=!busy,onClick=close)

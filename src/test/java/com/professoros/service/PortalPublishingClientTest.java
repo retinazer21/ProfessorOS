@@ -13,8 +13,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Contract test with a local fake Auth/REST boundary, not a claim of hosted Auth verification. */
 class PortalPublishingClientTest {
-    @Test void mfaTokenUsedForIdempotentPublicationAndRevoked() throws Exception {
-        var calls=new ArrayList<String>(); var snapshots=new HashMap<String,String>();
+    @Test void publicationUsesReviewedRevisionAndDoesNotRetryConflict() throws Exception {
+        var calls=new ArrayList<String>();
+        var revision=UUID.randomUUID();
+        var publicationStatus=new java.util.concurrent.atomic.AtomicInteger(200);
+        var publicationRequest=new java.util.concurrent.atomic.AtomicReference<JsonObject>();
         var role = new java.util.concurrent.atomic.AtomicReference<>("professor");
         var enrollment = UUID.randomUUID();
         var lecture = UUID.randomUUID();
@@ -69,23 +72,30 @@ class PortalPublishingClientTest {
                 }
                 case "/rest/v1/portal_published_grades" -> {
                     assertEquals("Bearer mfa-test-token",exchange.getRequestHeaders().getFirst("Authorization"));
-                    assertTrue(exchange.getRequestHeaders().getFirst("Prefer").contains("merge-duplicates"));
-                    assertEquals("on_conflict=offering_id,student_id",exchange.getRequestURI().getRawQuery());
-                    var data=JsonParser.parseString(input).getAsJsonObject();
-                    snapshots.put(data.get("offering_id")+":"+data.get("student_id"),input);
-                    yield "["+input+"]";
+                    assertEquals("GET", exchange.getRequestMethod());
+                    yield "[{\"revision\":\""+revision+"\",\"score\":72,\"letter\":\"C\"}]";
+                }
+                case "/rest/v1/rpc/desktop_publish_grade" -> {
+                    assertEquals("Bearer mfa-test-token",exchange.getRequestHeaders().getFirst("Authorization"));
+                    publicationRequest.set(JsonParser.parseString(input).getAsJsonObject());
+                    yield publicationStatus.get()==409 ? "{\"code\":\"PT409\"}" : "\""+revision+"\"";
                 }
                 default -> "";
             };
             byte[] output=answer.getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(path.endsWith("/desktop_save_attendance_sheet") ? saveStatus.get() : 200,output.length==0?-1:output.length);
+            int responseStatus = switch (path) {
+                case "/rest/v1/rpc/desktop_save_attendance_sheet" -> saveStatus.get();
+                case "/rest/v1/rpc/desktop_publish_grade" -> publicationStatus.get();
+                default -> 200;
+            };
+            exchange.sendResponseHeaders(responseStatus,output.length==0?-1:output.length);
             if(output.length>0)exchange.getResponseBody().write(output);exchange.close();
         });
         server.start();
         try {
             var client=new PortalPublishingClient(URI.create("http://127.0.0.1:"+server.getAddress().getPort()),"sb_publishable_test",HttpClient.newHttpClient());
             var grade=new GradePublication(UUID.randomUUID(),UUID.randomUUID(),new BigDecimal("72"),"C");
-            assertThrows(DomainValidationException.class,()->client.publish(grade));
+            assertThrows(DomainValidationException.class,()->client.publish(grade,null));
             client.signIn("professor@example.invalid","test-only-password","123456");
             var mark = client.attendance().getFirst();
             assertEquals(offering,client.attendanceOfferings().getFirst().id());
@@ -121,9 +131,18 @@ class PortalPublishingClientTest {
             assertThrows(java.io.IOException.class, client::authorizedProfessor);
             role.set("professor");
             assertTrue(client.authorizedProfessor());
-            client.publish(grade);client.publish(grade);client.signOut();
-            assertEquals(1,snapshots.size());assertEquals("/auth/v1/logout",calls.getLast());
-            assertThrows(DomainValidationException.class,()->client.publish(grade));
+            assertEquals(revision,client.currentPublication(grade).orElseThrow().revision());
+            assertEquals(revision,client.publish(grade,null));
+            assertTrue(publicationRequest.get().get("expected_revision").isJsonNull());
+            publicationStatus.set(409);
+            int publicationsBefore = Collections.frequency(calls,"/rest/v1/rpc/desktop_publish_grade");
+            assertThrows(PortalPublishingClient.PublicationConflict.class,()->client.publish(grade,revision));
+            assertEquals(publicationsBefore+1,Collections.frequency(calls,"/rest/v1/rpc/desktop_publish_grade"));
+            assertEquals(revision.toString(),publicationRequest.get().get("expected_revision").getAsString());
+            assertEquals(grade.score(),publicationRequest.get().get("new_score").getAsBigDecimal());
+            client.signOut();
+            assertEquals("/auth/v1/logout",calls.getLast());
+            assertThrows(DomainValidationException.class,()->client.publish(grade,revision));
             role.set("student");
             assertThrows(DomainValidationException.class, () ->
                     client.signIn("student@example.invalid","test-only-password","123456"));

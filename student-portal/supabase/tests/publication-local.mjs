@@ -17,6 +17,7 @@ try {
         await db.exec(await readFile(`student-portal/supabase/migrations/${name}`, 'utf8'));
     await db.exec(await readFile('student-portal/supabase/tests/authorization.sql', 'utf8'));
     await db.exec(await readFile('student-portal/supabase/tests/publication.sql', 'utf8'));
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200010_grade_publication_revision.sql', 'utf8'));
     const student='10000000-0000-4000-8000-000000000001';
     const other='10000000-0000-4000-8000-000000000002';
     const professor='10000000-0000-4000-8000-000000000003';
@@ -35,17 +36,22 @@ try {
         try { return await action(); } finally { await db.exec('reset role'); }
     }
     const read=()=>db.query('select * from public.portal_published_grades');
-    const publish=()=>db.query(`insert into public.portal_published_grades(offering_id,student_id,score,letter)
-      values ($1,$2,72,'C') on conflict(offering_id,student_id) do update set score=excluded.score,letter=excluded.letter returning *`,[offering,student]);
+    const publish=()=>db.query("select public.desktop_publish_grade($1,$2,null,72,'C')",[offering,student]);
     assert.equal((await as(student,'aal2',read)).rows.length,0,'Unpublished data is absent');
-    await assert.rejects(as(professor,'aal1',publish),/row-level security/);
-    await assert.rejects(as(student,'aal2',publish),/row-level security/);
-    await assert.rejects(as(outsider,'aal2',publish),/row-level security/);
-    await as(professor,'aal2',publish);await as(professor,'aal2',publish);
-    assert.equal((await as(student,'aal2',read)).rows.length,1,'Duplicate publication updates one snapshot');
+    await assert.rejects(as(professor,'aal1',publish),{code:'42501'});
+    await assert.rejects(as(student,'aal2',publish),{code:'42501'});
+    await assert.rejects(as(outsider,'aal2',publish),{code:'42501'});
+    await db.exec('set role anon');
+    await assert.rejects(publish(),{code:'42501'});
+    await db.exec('reset role');
+    await as(professor,'aal2',publish);
+    await assert.rejects(as(professor,'aal2',publish),{code:'PT409'});
+    assert.equal((await as(student,'aal2',read)).rows.length,1,'Duplicate publication leaves one snapshot');
     assert.equal((await as(other,'aal2',read)).rows.length,0,'Other student cannot read');
     assert.equal((await as(student,'aal1',read)).rows.length,0,'Password-only read denied');
     await db.query('delete from auth.sessions where user_id=$1',[student]);
     assert.equal((await as(student,'aal2',read)).rows.length,0,'Revoked session cannot replay');
-    console.log('PASS: original RLS regression; unpublished privacy, professor ownership, MFA, student isolation, idempotent publication and revoked-session denial.');
+    await db.query('delete from auth.sessions where user_id=$1',[professor]);
+    await assert.rejects(as(professor,'aal2',publish),{code:'42501'});
+    console.log('PASS: publication RLS, MFA, student isolation, duplicate creation and revoked sessions.');
 } finally { await db.close(); }

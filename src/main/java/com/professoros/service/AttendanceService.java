@@ -18,7 +18,7 @@ public final class AttendanceService {
     public void save(long offering,long lecture,Map<Long,AttendanceStatus> changes) {
         requireOffering(offering);
         var selected=lectures.findById(offering,lecture).orElseThrow(()->new DomainValidationException("Choose a lecture in this offering."));
-        if(selected.status()==LectureStatus.CANCELLED) throw new DomainValidationException("Cancelled lectures are read-only. Restore the lecture before editing attendance.");
+        if(!selected.status().acceptsAttendance()) throw new DomainValidationException("Attendance can be edited only for completed or partially completed lectures.");
         if(changes==null) throw new DomainValidationException("Attendance changes are required.");
         var copy=new LinkedHashMap<Long,AttendanceStatus>(changes);
         for(Long id:copy.keySet()) if(id==null || enrollments.findById(id).filter(e->e.courseOfferingId()==offering).isEmpty()) throw new DomainValidationException("Every student must be enrolled in the lecture's offering. Refresh the roster.");

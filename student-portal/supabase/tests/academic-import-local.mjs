@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { DatabaseSync } from 'node:sqlite';
+import { preparePrivateBackfill } from '../../../tools/desktop-backfill.mjs';
 import { extract, transaction } from '../../../tools/academic-import.mjs';
 
 // Supply a verified fictional SQLite snapshot and its explicit account bindings.
@@ -67,10 +69,45 @@ try {
         }
     }
     await db.exec(await readFile('student-portal/supabase/migrations/202611200003_desktop_attendance.sql','utf8'));
-    const sample = data.attendance.find(m => data.enrollment.some(e=>e.id===m.enrollment_id && e.student_id===data.account_link[0].student_id));
-    const updated = sample.status === 'LATE' ? 'PRESENT' : 'LATE';
+    // Reproduce the hosted order: the original attendance rollout predates the private tables.
     await db.exec(await readFile('student-portal/supabase/migrations/202611200006_attendance_sheet.sql','utf8'));
     await db.exec(await readFile('student-portal/supabase/migrations/202611200007_attendance_conflict.sql','utf8'));
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200004_private_desktop_domains.sql','utf8'));
+    const backfill=preparePrivateBackfill(snapshot,bindings);
+    await db.exec(backfill.sql);
+    await db.exec(backfill.sql);
+    for(const [table,count] of Object.entries(backfill.counts))
+        assert.equal((await db.query('select count(*)::int n from desktop_private.'+table)).rows[0].n,count);
+    await assert.rejects(as(data.account_link[0].user_id,'aal2',()=>db.exec('table desktop_private.student_grades')),/permission denied/);
+    await assert.rejects(as(outsider,'aal2',()=>db.exec('table desktop_private.questions')),/permission denied/);
+    console.log('PASS: private domain backfill, stable mappings, identical rerun and draft/answer isolation');
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200005_desktop_workspace_read.sql','utf8'));
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200008_attendance_detail_lifecycle.sql','utf8'));
+    await db.exec(await readFile('student-portal/supabase/migrations/202611200009_attendance_eligibility.sql','utf8'));
+    const workspace = () => db.query('select public.desktop_read_workspace() as records');
+    await db.exec('set role anon');
+    await assert.rejects(workspace(), /permission denied/);
+    await db.exec('reset role');
+    await assert.rejects(as(bindings.professor,'aal1',workspace), /Authorized workspace owner/);
+    await assert.rejects(as(outsider,'aal2',workspace), /Authorized workspace owner/);
+    await assert.rejects(as(bindings.students[0].user_id,'aal2',workspace), /Authorized workspace owner/);
+    const records = (await as(bindings.professor,'aal2',workspace)).rows[0].records;
+    const original = new DatabaseSync(snapshot,{readOnly:true});
+    try {
+        const tables = original.prepare("select name from sqlite_schema where type='table' and name not in ('schema_version','sqlite_sequence')").all();
+        assert.deepEqual(Object.keys(records).sort(),tables.map(t=>t.name).sort());
+        const canonical = row => JSON.stringify(row,Object.keys(row).sort());
+        for(const {name} of tables) {
+            const expected = original.prepare('select * from "'+name.replaceAll('"','""')+'"').all();
+            assert.deepEqual(records[name].map(canonical).sort(),expected.map(canonical).sort(),name);
+        }
+    } finally { original.close(); }
+    await db.query('update public.portal_offerings set professor_id=$1 where id=$2',[outsider,data.offering[0].id]);
+    await assert.rejects(as(bindings.professor,'aal2',workspace), /Authorized workspace owner/);
+    await db.query('update public.portal_offerings set professor_id=$1 where id=$2',[bindings.professor,data.offering[0].id]);
+    console.log('PASS: professor-only workspace projection matches every source academic row and field');
+    const sample = data.attendance.find(m => data.enrollment.some(e=>e.id===m.enrollment_id && e.student_id===data.account_link[0].student_id));
+    const updated = sample.status === 'LATE' ? 'PRESENT' : 'LATE';
     const sheet = () => db.query('select public.desktop_attendance_sheet($1) as sheet',[sample.offering_id]);
     const edit = (mark,expected,desired)=>({enrollment:mark.enrollment_id,lecture:mark.lecture_id,expected,desired});
     const save = edits => db.query('select public.desktop_save_attendance_sheet($1,$2) as count',
@@ -106,6 +143,17 @@ try {
     await assert.rejects(professor(()=>save([otherEdit,clear])),/Attendance changed/);
     assert.deepEqual((await readSheet()).marks,blank.marks);
     await professor(()=>save([edit(sample,null,sample.status)]));
+    const detail = async () => (await db.query(
+        'select created_at,updated_at from desktop_private.attendance_detail where enrollment_id=$1 and lecture_id=$2',
+        [sample.enrollment_id,sample.lecture_id])).rows[0];
+    const inserted = await detail();
+    assert.match(inserted.created_at,/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);
+    assert.equal(inserted.created_at,inserted.updated_at);
+    await professor(()=>save([edit(sample,sample.status,updated)]));
+    const changed = await detail();
+    assert.equal(changed.created_at,inserted.created_at);
+    assert.ok(changed.updated_at > inserted.updated_at);
+    await professor(()=>save([edit(sample,updated,sample.status)]));
     await assert.rejects(professor(()=>save([edit(sample,null,updated)])),/Attendance changed/);
     const outside=data.attendance.find(m=>m.offering_id!==sample.offering_id);
     await assert.rejects(professor(()=>save([edit(outside,outside.status,null)])),/Cell unavailable/);
@@ -114,6 +162,32 @@ try {
     const change = (expected,next)=>db.query('select public.desktop_change_attendance($1,$2,$3,$4) as status',
         [sample.enrollment_id,sample.lecture_id,expected,next]);
     const write = ()=>change(sample.status,updated);
+    // Include both writers and every lecture state in the eligibility contract.
+    // Roll each fixture back, including timestamps and the enrollment status.
+    for (const [enrollmentStatus,lectureStatus,allowed] of [
+        ['WITHDRAWN','COMPLETED',false],['ACTIVE','PLANNED',false],['ACTIVE','CANCELLED',false],
+        ['ACTIVE','COMPLETED',true],['ACTIVE','PARTIALLY_COMPLETED',true],
+    ]) {
+        await db.transaction(async tx => {
+            await tx.query('update academic_import.enrollment set status=$2 where id=$1',[sample.enrollment_id,enrollmentStatus]);
+            await tx.query('update academic_import.lecture set status=$2 where id=$1',[sample.lecture_id,lectureStatus]);
+            await tx.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:bindings.professor,session_id:bindings.professor,aal:'aal2'})]);
+            await tx.exec('set local role authenticated');
+            const legacy = () => tx.query('select public.desktop_change_attendance($1,$2,$3,$4) as mark',[sample.enrollment_id,sample.lecture_id,sample.status,updated]);
+            const batch = () => tx.query('select public.desktop_save_attendance_sheet($1,$2) as count',[sample.offering_id,JSON.stringify([edit(sample,allowed?updated:sample.status,allowed?sample.status:updated)])]);
+            if(allowed){
+                assert.equal((await legacy()).rows[0].mark,updated);
+                assert.equal((await batch()).rows[0].count,1);
+            } else {
+                for(const call of [legacy,batch]){
+                    await tx.exec('savepoint rejected_cell');
+                    await assert.rejects(call(),{code:'42501'});
+                    await tx.exec('rollback to rejected_cell');
+                }
+            }
+            await tx.rollback();
+        });
+    }
     await assert.rejects(as(bindings.professor,'aal1',write),/verification required/);
     await assert.rejects(as(data.account_link[0].user_id,'aal2',write),/verification required/);
     await assert.rejects(as(outsider,'aal2',write),/unavailable or changed/);

@@ -5,5 +5,6 @@ public enum LectureStatus {
     private final String label;
     LectureStatus(String label) { this.label = label; }
     public boolean unfinished() { return this == PLANNED || this == PARTIALLY_COMPLETED; }
+    public boolean acceptsAttendance() { return this == COMPLETED || this == PARTIALLY_COMPLETED; }
     @Override public String toString() { return label; }
 }

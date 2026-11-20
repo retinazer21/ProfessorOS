@@ -4,6 +4,8 @@ import com.google.gson.*;
 import com.professoros.model.DomainValidationException;
 import java.net.URI;
 import java.net.http.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.List;
@@ -13,6 +15,18 @@ import java.util.UUID;
  * Passwords/tokens are never persisted or logged. Redirects are never followed. */
 public final class PortalPublishingClient {
     private static final String SAVE_ATTENDANCE = "/rest/v1/rpc/desktop_save_attendance_sheet";
+    private static final String PUBLISH_GRADE = "/rest/v1/rpc/desktop_publish_grade";
+    private static final String WRITE_CATALOG = "/rest/v1/rpc/desktop_write_catalog";
+    private static final String WRITE_ROSTER = "/rest/v1/rpc/desktop_write_roster";
+    private static final String WRITE_GRADEBOOK = "/rest/v1/rpc/desktop_write_gradebook";
+    private static final String WRITE_QUESTION = "/rest/v1/rpc/desktop_write_question";
+    private static final String WRITE_EXAM = "/rest/v1/rpc/desktop_write_exam";
+
+    public static final class PublicationConflict extends DomainValidationException {
+        private PublicationConflict() {
+            super("The published grade changed. Your grade is still pending. Load the latest publication and review it before confirming again.");
+        }
+    }
 
     public static final class AttendanceConflict extends DomainValidationException {
         private AttendanceConflict() {
@@ -28,6 +42,7 @@ public final class PortalPublishingClient {
     private boolean professorAuthorized;
     private String refreshToken;
     private long refreshAfter;
+    private Path imageDirectory;
 
     private void acceptSession(JsonObject response) {
         token = response.get("access_token").getAsString();
@@ -68,6 +83,10 @@ public final class PortalPublishingClient {
         int status = response.statusCode();
         if (status == 409 && path.equals(SAVE_ATTENDANCE) && hasErrorCode(response.body(), "PT409"))
             throw new AttendanceConflict();
+        if (status == 409 && path.equals(PUBLISH_GRADE) && hasErrorCode(response.body(), "PT409"))
+            throw new PublicationConflict();
+        if (status == 409 && List.of(WRITE_CATALOG,WRITE_ROSTER,WRITE_GRADEBOOK,WRITE_QUESTION,WRITE_EXAM).contains(path))
+            throw new DomainValidationException("A record changed or already exists. Your edits are still pending. Refresh and review before saving.");
         if (status >= 500 || status == 408 || status == 429) {
             throw new java.io.IOException("Supabase is temporarily unavailable (HTTP " + status + ").");
         }
@@ -144,6 +163,122 @@ public final class PortalPublishingClient {
         return java.util.Arrays.stream(json.fromJson(request("GET",
                 "/rest/v1/rpc/portal_course_catalog?order=term,code,section,id", null, null), Offering[].class))
                 .filter(o -> o.code() != null && o.term() != null && o.section() != null).toList();
+    }
+
+    /** Full private academic projection, restricted by the database to the assigned MFA workspace owner. */
+    public synchronized JsonObject readWorkspace() throws Exception {
+        requireProfessor();
+        var response = request("POST", "/rest/v1/rpc/desktop_read_workspace", Map.of(), null);
+        if (!response.isJsonObject())
+            throw new DomainValidationException("Supabase did not return the academic workspace.");
+        return materializeImages(response.getAsJsonObject());
+    }
+
+    public com.professoros.database.WorkspaceProjection openWorkspaceView() throws Exception {
+        return new com.professoros.database.WorkspaceProjection(readWorkspace());
+    }
+
+    public void refreshWorkspaceView(com.professoros.database.WorkspaceProjection view) throws Exception {
+        view.replace(readWorkspace());
+    }
+
+    synchronized JsonObject writeCatalog(JsonArray edits, JsonArray enrollments) throws Exception {
+        requireProfessor();
+        var payload = new JsonObject();
+        String path = WRITE_CATALOG;
+        if (enrollments.isEmpty()) payload.add("changes", edits);
+        else {
+            path = WRITE_ROSTER;
+            payload.add("catalog_changes", edits);
+            payload.add("enrollment_changes", enrollments);
+        }
+        return writeAcademic(path, payload);
+    }
+
+    synchronized JsonObject writeGradebook(JsonArray edits) throws Exception {
+        requireProfessor();
+        var payload = new JsonObject();
+        payload.add("changes", edits);
+        return writeAcademic(WRITE_GRADEBOOK, payload);
+    }
+
+    synchronized JsonObject writeQuestion(JsonObject previous, JsonObject desired, JsonArray choices) throws Exception {
+        requireProfessor();
+        var payload = new JsonObject();
+        var old = normalizeImagePath(previous);
+        var next = normalizeImagePath(desired);
+        payload.add("previous",old);
+        payload.add("desired",next);
+        payload.add("choices",choices);
+        String encoded = null;
+        if (desired != null) {
+            String path = desired.get("image_path").getAsString();
+            if (!path.isBlank() && path.equals(next.get("image_path").getAsString())) {
+                com.professoros.pdf.PdfImages.read(path,"Question image");
+                var image = Files.readAllBytes(Path.of(path));
+                if (image.length > 10*1024*1024) throw new DomainValidationException("Question image exceeds 10 MB.");
+                encoded = java.util.Base64.getEncoder().encodeToString(image);
+                next.addProperty("image_path","");
+            }
+        }
+        payload.addProperty("encoded_image",encoded);
+        return writeAcademic(WRITE_QUESTION,payload);
+    }
+
+    synchronized JsonObject writeExam(JsonObject previous, JsonObject desired, JsonArray selection) throws Exception {
+        requireProfessor();
+        var payload = new JsonObject();
+        payload.add("previous",previous);
+        payload.add("desired",desired);
+        payload.add("selection",selection);
+        for (var entry : selection) {
+            var item = entry.getAsJsonObject();
+            item.add("source", normalizeImagePath(item.getAsJsonObject("source")));
+        }
+        return writeAcademic(WRITE_EXAM,payload);
+    }
+
+    private JsonObject normalizeImagePath(JsonObject question) {
+        if (question == null) return null;
+        var normalized = question.deepCopy();
+        var field = question.get("image_path");
+        if (imageDirectory != null && field != null && !field.getAsString().isBlank()) {
+            Path path = Path.of(field.getAsString());
+            if (imageDirectory.equals(path.getParent()) && path.getFileName().toString().matches("[a-f0-9]{64}"))
+                normalized.addProperty("image_path",path.getFileName().toString());
+        }
+        return normalized;
+    }
+
+    private JsonObject materializeImages(JsonObject snapshot) throws Exception {
+        for (String table : List.of("questions","exam_questions")) {
+            if (!snapshot.has(table)) continue;
+            for (var row : snapshot.getAsJsonArray(table)) {
+                var question = row.getAsJsonObject();
+                String key = question.get("image_path").getAsString();
+                if (key.isBlank()) continue;
+                if (!key.matches("[a-f0-9]{64}")) throw new DomainValidationException("Invalid question image reference.");
+                if (imageDirectory == null) imageDirectory = Files.createTempDirectory("professor-os-exam-images-");
+                Path target = imageDirectory.resolve(key);
+                if (!Files.exists(target)) {
+                    var encoded = request("POST","/rest/v1/rpc/desktop_read_exam_image",Map.of("image_digest",key),null);
+                    if (!encoded.isJsonPrimitive()) throw new DomainValidationException("Question image could not be loaded.");
+                    var bytes = java.util.Base64.getMimeDecoder().decode(encoded.getAsString());
+                    var sha256 = java.security.MessageDigest.getInstance("SHA-256");
+                    if (bytes.length > 10*1024*1024 || !key.equals(java.util.HexFormat.of().formatHex(sha256.digest(bytes))))
+                        throw new DomainValidationException("Question image failed verification.");
+                    Files.write(target,bytes);
+                }
+                question.addProperty("image_path",target.toString());
+            }
+        }
+        return snapshot;
+    }
+
+    private JsonObject writeAcademic(String path, JsonObject payload) throws Exception {
+        var response = request("POST", path, payload, null);
+        if (!response.isJsonObject()) throw new DomainValidationException("Save could not be confirmed. Refresh before retrying.");
+        return materializeImages(response.getAsJsonObject());
     }
 
     public synchronized AttendanceSheet attendanceSheet(UUID offering) throws Exception {
@@ -225,18 +360,64 @@ public final class PortalPublishingClient {
             throw new DomainValidationException("Attendance change was not confirmed. Refresh before retrying.");
         return result.getAsString();
     }
-    public synchronized void publish(GradePublication publication) throws Exception {
-        if (!professorAuthorized) throw new DomainValidationException("Sign in with professor MFA before publishing.");
-        refreshIfDue();
-        var payload = Map.of("offering_id", publication.offering().toString(), "student_id", publication.student().toString(),
-                "score", publication.score(), "letter", publication.letter());
-        var rows = request("POST", "/rest/v1/portal_published_grades?on_conflict=offering_id,student_id", payload,
-                "resolution=merge-duplicates,return=representation").getAsJsonArray();
-        if (rows.size() != 1) throw new DomainValidationException("Publication was not confirmed. Retry the same mapping safely.");
+    public record PublishedGrade(UUID revision, java.math.BigDecimal score, String letter) {}
+    public record PublicationTarget(UUID offering, UUID student) {}
+
+    public synchronized PublicationTarget publicationTarget(long offering, long enrollment) throws Exception {
+        requireProfessor();
+        var result = request("POST", "/rest/v1/rpc/desktop_grade_publication_target",
+                Map.of("offering_local_id",offering,"enrollment_local_id",enrollment), null);
+        if (!result.isJsonObject())
+            throw new DomainValidationException("This enrollment has no active Student Portal account mapping.");
+        var mapped = json.fromJson(result, PublicationTarget.class);
+        if (mapped.offering() == null || mapped.student() == null)
+            throw new DomainValidationException("The portal account mapping could not be verified.");
+        return mapped;
+    }
+
+    public synchronized java.util.Optional<PublishedGrade> currentPublication(GradePublication grade) throws Exception {
+        requireProfessor();
+        var rows = request("GET", "/rest/v1/portal_published_grades?select=revision,score,letter&offering_id=eq."
+                + grade.offering() + "&student_id=eq." + grade.student(), null, null).getAsJsonArray();
+        if (rows.isEmpty()) return java.util.Optional.empty();
+        if (rows.size() != 1) throw new DomainValidationException("Unexpected publication response.");
+        var published = json.fromJson(rows.get(0), PublishedGrade.class);
+        if (published.revision() == null || published.score() == null || published.letter() == null)
+            throw new DomainValidationException("The current publication could not be verified.");
+        return java.util.Optional.of(published);
+    }
+
+    public synchronized UUID publish(GradePublication publication, UUID expectedRevision) throws Exception {
+        requireProfessor();
+        var payload = new JsonObject();
+        payload.addProperty("target_offering", publication.offering().toString());
+        payload.addProperty("target_student", publication.student().toString());
+        payload.addProperty("expected_revision", expectedRevision == null ? null : expectedRevision.toString());
+        payload.addProperty("new_score", publication.score());
+        payload.addProperty("new_letter", publication.letter());
+        var result = request("POST", PUBLISH_GRADE, payload, null);
+        if (!result.isJsonPrimitive() || !result.getAsJsonPrimitive().isString())
+            throw new DomainValidationException("Publication was not confirmed. Load the latest publication before trying again.");
+        return UUID.fromString(result.getAsString());
     }
     public synchronized void signOut() throws Exception {
         if (token == null) return;
         try { request("POST", "/auth/v1/logout?scope=local", Map.of(), null); }
-        finally { token = null; refreshToken = null; account = null; professorAuthorized = false; }
+        finally {
+            token = null;
+            refreshToken = null;
+            account = null;
+            professorAuthorized = false;
+            if (imageDirectory != null) {
+                try {
+                    List<Path> cached;
+                    try (var images = Files.list(imageDirectory)) { cached = images.toList(); }
+                    for (Path image : cached) Files.deleteIfExists(image);
+                    Files.deleteIfExists(imageDirectory);
+                } catch (java.io.IOException cleanupFailure) {
+                    java.util.logging.Logger.getLogger(PortalPublishingClient.class.getName()).warning("Could not remove the local exam image cache.");
+                } finally { imageDirectory = null; }
+            }
+        }
     }
 }

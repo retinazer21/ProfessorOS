@@ -1,6 +1,6 @@
 # Professor OS
 
-An offline-first academic workspace for university professors, with a separate Student Portal secured by Supabase Auth. The desktop application manages saved teaching records locally; the portal provides managed sign-in and MFA in the existing Studio Window interface.
+An online academic workspace for university professors, with a separate Student Portal. Supabase stores the desktop workspace and manages sign-in and MFA for both applications.
 
 **Student Portal — planned GitHub Pages address:** [retinazer21.github.io/ProfessorOS](https://retinazer21.github.io/ProfessorOS/). Hosting is prepared but publication has not been performed by this change.
 
@@ -17,11 +17,11 @@ An offline-first academic workspace for university professors, with a separate S
 | Question bank, exam generation and saved exam snapshots | Required authenticator TOTP enrollment and verification |
 | Arabic/English Excel student import and formatted exports | Student/professor roles enforced through database RLS |
 | Exam and answer-key PDF preview/export | Session refresh and global sign-out |
-| Local SQLite persistence, migrations and appearance settings | Hash routing compatible with static GitHub Pages hosting |
+| Protected SQLite recovery workspace and local appearance settings | Hash routing compatible with static GitHub Pages hosting |
 
 Desktop Settings and the portal’s Appearance gallery share ten workspace themes. Choose a theme or follow the system, adjust the accent, and reduce motion. Each device or browser keeps its own preference.
 
-An online desktop attendance register is available through the development launcher. The regular desktop still uses SQLite. See the [online desktop setup and migration status](docs/DESKTOP_ONLINE_MIGRATION.md).
+The standard desktop opens the MFA-protected workspace. Use `runRecovery` to open the local SQLite recovery workspace explicitly. See the [online desktop setup and migration status](docs/DESKTOP_ONLINE_MIGRATION.md).
 
 ## Screenshots
 
@@ -43,14 +43,15 @@ These committed images illustrate the portal design and may predate the live aut
 
 ```text
 Compose Desktop UI (Kotlin/JVM)
-    → Java services → repositories/JDBC → local SQLite
+    → Java services → session-local academic view
+    → authenticated Supabase PostgreSQL reads and writes
 
 Student Portal (React + TypeScript + Vite)
     → Supabase Auth: password, sessions, TOTP
     → Supabase PostgreSQL: role/ownership policies and RLS
 
-GitHub Pages serves only the portal's static production build.
-Only explicitly published final-grade snapshots cross this boundary.
+GitHub Pages serves the portal's static build.
+Students can read only explicitly published final-grade snapshots.
 ```
 
 Domain models remain independent of UI and database access. Desktop services own validation and academic calculations; repositories own parameterized SQL. The portal keeps authentication coordination outside page components and checks both MFA assurance and database-assigned access before opening protected routes.
@@ -80,9 +81,9 @@ cd ProfessorOS
 .\prototype-compose\gradlew.bat -p prototype-compose run
 ```
 
-On Linux/macOS, use `./prototype-compose/gradlew -p prototype-compose run`. Maven builds the backend library; the Compose Gradle task launches the application.
+On Linux/macOS, use `./prototype-compose/gradlew -p prototype-compose run`. Sign in with a provisioned professor account and its enrolled authenticator. Set `PROFESSOR_OS_SUPABASE_URL` and `PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY` for the desktop. The Gradle launcher also accepts the matching `VITE_` values from `student-portal/.env.local` when the desktop variables are absent.
 
-Development data defaults to `data/professor-os.db`. Set `PROFESSOR_OS_DATA_DIR` before launching to choose a different directory. Changing the path does not copy existing data. Startup never seeds demo records automatically. See the [user guide](docs/USER_GUIDE.md) for academic workflows, storage configuration and the Windows shell workaround.
+The `runRecovery` task opens the local SQLite workspace, which defaults to `data/professor-os.db` in development. Set `PROFESSOR_OS_DATA_DIR` to choose a different recovery directory. See the [user guide](docs/USER_GUIDE.md) for academic workflows and the Windows shell workaround.
 
 ### Student Portal
 

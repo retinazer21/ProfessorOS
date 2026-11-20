@@ -7,7 +7,13 @@ import androidx.compose.ui.res.painterResource
 import com.professoros.app.AppPaths
 import androidx.compose.foundation.isSystemInDarkTheme
 
-fun main() = application {
+fun main() = onlineDesktop()
+
+object RecoveryDesktopLauncher {
+    @JvmStatic fun main(args: Array<String>) = recoveryDesktop()
+}
+
+private fun recoveryDesktop() = application {
     var page by remember { mutableStateOf("Overview") }
     val scope = rememberCoroutineScope()
     val preferences = remember { AppearanceSettings(AppPaths.databaseFile(),scope) }
@@ -32,19 +38,24 @@ fun main() = application {
         ProfessorDashboard(workspace.snapshot, workspace.busy, workspace.loadError, page, { next ->workspace.guard {page=next} },
             { workspace.guard {workspace.refresh()} }, { id ->workspace.select(id) {page="Teaching context"} },featureContent={ destination ->
                 CompositionLocalProvider(LocalControlsEnabled provides !workspace.busy) {
-                when(destination) {
-                    "Settings" -> SettingsScreen(preferences) { workspace.guard {page="Terms"} }
-                    "Teaching context" -> RosterScreen(workspace)
-                    "Lectures" -> LectureScreen(workspace)
-                    "Question Bank" -> QuestionScreen(workspace)
-                    "Exam Builder" -> ExamScreen(workspace)
-                    "Gradebook" -> GradebookScreen(workspace)
-                    "Attendance" -> AttendanceScreen(workspace)
-                    else -> CatalogScreen(destination,workspace) {id->workspace.select(id) {page="Teaching context"}}
-                }
+                    AcademicScreen(destination, workspace, preferences) {page=it}
                 }
             })
         WorkspaceOverlays(workspace)
         }
+    }
+}
+
+@Composable
+internal fun AcademicScreen(destination: String, workspace: WorkspaceController, preferences: AppearanceSettings, navigate: (String)->Unit) {
+    when(destination) {
+        "Settings" -> SettingsScreen(preferences) { workspace.guard { navigate("Terms") } }
+        "Teaching context" -> RosterScreen(workspace)
+        "Lectures" -> LectureScreen(workspace)
+        "Question Bank" -> QuestionScreen(workspace)
+        "Exam Builder" -> ExamScreen(workspace)
+        "Gradebook" -> GradebookScreen(workspace)
+        "Attendance" -> AttendanceScreen(workspace)
+        else -> CatalogScreen(destination,workspace) {id -> workspace.select(id) { navigate("Teaching context") }}
     }
 }

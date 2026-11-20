@@ -32,7 +32,7 @@ internal fun WorkspaceController.editQuestion(existing:Question?=null,courseId:L
 internal fun WorkspaceController.saveQuestion() {
     if(busy)return
     val draft=questionDraft?:return;val input=draft.input()
-    mutate {if(draft.existing==null)services.academic.questions().create(input) else services.academic.questions().update(draft.existing.id(),input)}
+    mutateAcademic { services -> if(draft.existing==null)services.academic.questions().create(input) else services.academic.questions().update(draft.existing.id(),input)}
 }
 internal fun questionDetails(q:ExamQuestion):String = "${q.type()} · ${q.difficulty()} · ${q.marks()} marks\nTopic: ${q.topic()}\n\n${q.text()}\n\n"+
     q.choices().mapIndexed {index,choice->"${index+1}. ${choice.text()}${if(choice.correct())" ✓ Correct" else ""}"}.joinToString("\n")+
@@ -101,7 +101,7 @@ internal fun questionDetails(q:ExamQuestion):String = "${q.type()} · ${q.diffic
             Action("New question","book",variant=ActionVariant.PRIMARY,enabled=c.catalog.courses.isNotEmpty()&&!c.busy,modifier=Modifier.testTag("new-question")){c.editQuestion(courseId=course.toLongOrNull())}
             Action("Edit",enabled=row!=null&&!c.busy){row?.let {c.editQuestion(it)}}
             Action("Details",enabled=row!=null){row?.let {c.detail=Detail("Question details",questionDetails(ExamQuestion.snapshot(it,1))+"\n\nUsage: ${it.usageCount()} · Last used: ${it.lastUsedDate()?:"Never"}\nCreated: ${it.createdAt()}\nUpdated: ${it.updatedAt()}")}}
-            Action("Delete",variant=ActionVariant.DESTRUCTIVE,enabled=row!=null&&!c.busy){row?.let {c.confirm("Delete question?",it.text()+"\nDeletion may be restricted by saved exam history."){c.mutate {c.services.academic.questions().delete(it.id())}}}}
+            Action("Delete",variant=ActionVariant.DESTRUCTIVE,enabled=row!=null&&!c.busy){row?.let {c.confirm("Delete question?",it.text()+"\nDeletion may be restricted by saved exam history."){c.mutateAcademic { services -> services.academic.questions().delete(it.id())}}}}
             Action("Clear filters"){query="";course="";type="";difficulty=""}
         }
         val rows=c.questions.filter {it.matches(query)&&(course.isEmpty()||it.courseId().toString()==course)&&(type.isEmpty()||it.type().name==type)&&(difficulty.isEmpty()||it.difficulty().name==difficulty)}
