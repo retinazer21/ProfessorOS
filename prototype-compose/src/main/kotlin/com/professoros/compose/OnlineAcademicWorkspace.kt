@@ -15,7 +15,7 @@ import kotlinx.coroutines.*
 @Composable
 internal fun OnlineAcademicWorkspace(client: PortalPublishingClient, settings: AppearanceSettings,
                                      closeGuard: (((() -> Unit) -> Unit)?) -> Unit,
-                                     attendance: () -> Unit, logout: () -> Unit) {
+                                     drafts: MutableMap<java.util.UUID,Map<RegisterKey,PendingMark>>, stateChanged: (Boolean) -> Unit, logout: () -> Unit) {
     var projection by remember(client) { mutableStateOf<WorkspaceProjection?>(null) }
     var error by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
@@ -36,14 +36,25 @@ internal fun OnlineAcademicWorkspace(client: PortalPublishingClient, settings: A
             owned?.close()
         }
     }
+    val attendance = remember(client) { OnlineAttendanceState() }
+    val attendanceScope = rememberCoroutineScope()
+    var page by remember(client) { mutableStateOf(if(drafts.isEmpty()) "Overview" else "Attendance") }
+    var attendanceRefresh by remember(client) { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize().background(Ink.background)) {
         val model = projection
+        if (model == null && page == "Attendance") {
+            ProfessorDashboard(null,attendance.busy,null,page,{ page=it },{ attendanceRefresh++ },{},
+                embeddedAttendance=true,sessionActions={ Action("Sign out",quiet=true,enabled=!attendance.busy,onClick=logout) }) {
+                OnlineAttendance(client,drafts,stateChanged,logout,attendance,attendanceRefresh,embedded=true,scope=attendanceScope)
+            }
+            return@Column
+        }
         if (model == null) {
             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Copy(if (error) "The academic workspace could not be opened. Check your connection and workspace assignment."
                     else "Loading academic records…")
                 if (error) Action("Retry") { attempt++ }
-                Action("Attendance",onClick=attendance)
+                Action("Attendance"){page="Attendance"}
                 Action("Sign out",quiet=true,onClick=logout)
             }
             return@Column
@@ -60,18 +71,17 @@ internal fun OnlineAcademicWorkspace(client: PortalPublishingClient, settings: A
             closeGuard { close -> workspace.guard(action = close) }
             onDispose { closeGuard(null) }
         }
-        var page by remember(model) { mutableStateOf("Overview") }
         LaunchedEffect(workspace) { workspace.refresh() }
-        Row(Modifier.fillMaxWidth().padding(horizontal=20.dp, vertical=6.dp), verticalAlignment=Alignment.CenterVertically) {
-            Copy("Online academic workspace", modifier=Modifier.weight(1f))
-            Action("Attendance",quiet=true,enabled=!workspace.busy) {workspace.guard {attendance()}}
-            Action("Sign out",quiet=true,enabled=!workspace.busy) {workspace.guard {logout()}}
-        }
-        ProfessorDashboard(workspace.snapshot,workspace.busy,workspace.loadError,page,
-            {next -> workspace.guard {if(next=="Attendance") attendance() else page=next}},
-            {workspace.guard {workspace.refresh()}},{id -> workspace.select(id) {page="Teaching context"}},
+        ProfessorDashboard(workspace.snapshot,workspace.busy || attendance.busy,workspace.loadError.takeUnless { page=="Attendance" },page,
+            {next -> if(!attendance.busy) workspace.guard {page=next} },
+            { if(page=="Attendance") attendanceRefresh++ else workspace.guard {workspace.refresh()} },
+            {id -> workspace.select(id) {page="Teaching context"}},
+            embeddedAttendance=true,
+            sessionActions={ Action("Sign out",quiet=true,enabled=!workspace.busy&&!attendance.busy) {workspace.guard {logout()}} },
             featureContent={destination ->
-                CompositionLocalProvider(LocalControlsEnabled provides !workspace.busy) {
+                if(destination=="Attendance")
+                    OnlineAttendance(client,drafts,stateChanged,logout,attendance,attendanceRefresh,embedded=true,scope=attendanceScope)
+                else CompositionLocalProvider(LocalControlsEnabled provides !workspace.busy) {
                     AcademicScreen(destination,workspace,settings) {page=it}
                 }
             })

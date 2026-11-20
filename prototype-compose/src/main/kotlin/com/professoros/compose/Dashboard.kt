@@ -25,6 +25,8 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
 @Composable fun ProfessorDashboard(snapshot: DashboardSnapshot?, loading: Boolean, error: String?, page: String,
     navigate: (String) -> Unit,
     refresh: () -> Unit, selectOffering: (Long) -> Unit,
+    embeddedAttendance: Boolean = false,
+    sessionActions: (@Composable () -> Unit)? = null,
     featureContent: (@Composable (String) -> Unit)? = null) {
     var picker by remember { mutableStateOf(false) }
     val reduced=LocalReduced.current
@@ -33,8 +35,8 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
     BoxWithConstraints(Modifier.fillMaxSize().background(Ink.background).testTag("dashboard-root")
         .onPreviewKeyEvent {
             if(it.type != KeyEventType.KeyDown) false
-            else if((it.isCtrlPressed || it.isMetaPressed) && it.key == Key.K) { picker=!picker; true }
-            else if((it.isCtrlPressed || it.isMetaPressed) && it.key == Key.R && !loading) { refresh(); true }
+            else if((it.isCtrlPressed || it.isMetaPressed) && it.key == Key.K && !(embeddedAttendance && page=="Attendance")) { picker=!picker; true }
+            else if((it.isCtrlPressed || it.isMetaPressed) && it.key == Key.R && !loading && !(embeddedAttendance && page=="Attendance")) { refresh(); true }
             else false
         }) {
         val compact = maxWidth < 1050.dp
@@ -47,7 +49,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
                     .padding(horizontal=24.dp), verticalAlignment=Alignment.CenterVertically,
                     horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     Copy(if(compact) page else "Workspace  /  " + page,12,Ink.muted,modifier=Modifier.weight(1f),lines=1)
-                    Box {
+                    if (!(embeddedAttendance && page=="Attendance")) Box {
                         Action(snapshot?.selected?.let { it.courseCode()+" · "+it.termName()+" · "+it.offering().section() } ?: "Choose offering","chevrons",
                             modifier=Modifier.widthIn(max=280.dp).testTag("choose-context").semantics { contentDescription="Choose teaching context, Control K" }) { picker=true }
                         if(picker) Popup(alignment=Alignment.TopEnd,offset=IntOffset(0,46),onDismissRequest={picker=false},
@@ -63,6 +65,7 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
                     }
                     Action("","refresh",enabled=!loading,
                         modifier=Modifier.testTag("refresh").semantics { contentDescription=if(loading)"Refreshing workspace" else "Refresh workspace, Control R" },onClick=refresh)
+                    sessionActions?.invoke()
                 }
                 Rule()
                 Box(Modifier.fillMaxSize().then(if(sheetPage) Modifier else Modifier.verticalScroll(pageScroll)).testTag("page-scroll"),contentAlignment=Alignment.TopCenter) {
@@ -79,8 +82,9 @@ private val workspaceDestinations = listOf("Overview" to "grid", "Courses" to "b
                             Copy("Workspace unavailable",16,weight=FontWeight.SemiBold);Copy(it,13,Ink.muted)
                             Action("Try again","refresh",onClick=refresh)
                         } }
-                        if(page=="Settings" && featureContent!=null) {
-                            featureContent(page)
+                        if((page=="Settings" || embeddedAttendance && page=="Attendance") && featureContent!=null) {
+                            if (page=="Attendance") Box(Modifier.weight(1f).fillMaxWidth()) { featureContent(page) }
+                            else featureContent(page)
                         } else if(snapshot==null) {
                             if(error==null) Copy("Opening your saved workspace…",14,Ink.muted)
                         } else {

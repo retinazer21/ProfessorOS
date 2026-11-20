@@ -86,9 +86,7 @@ fun onlineDesktop() = application {
                     }
                 }
                 key(active) {
-                    var browsing by remember { mutableStateOf(drafts.isEmpty()) }
-                    if (browsing) OnlineAcademicWorkspace(active,settings,{academicCloseGuard=it},{browsing=false}) {requestExit(false)}
-                    else OnlineAttendance(active,drafts,{working->registerBusy=working},{browsing=true}) {requestExit(false)}
+                    OnlineAcademicWorkspace(active,settings,{academicCloseGuard=it},drafts,{registerBusy=it}) {requestExit(false)}
                 }
             }
             exitAfterDiscard?.let { close ->
