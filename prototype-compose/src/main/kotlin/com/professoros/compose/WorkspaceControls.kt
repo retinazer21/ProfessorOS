@@ -19,11 +19,11 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.*
 
-@Composable internal fun Input(label:String,value:String,change:(String)->Unit,modifier:Modifier=Modifier,multiline:Boolean=false,tag:String=label) {
+@Composable internal fun Input(label:String,value:String,change:(String)->Unit,modifier:Modifier=Modifier,multiline:Boolean=false,tag:String=label,secret:Boolean=false) {
     var focused by remember {mutableStateOf(false)}
     Column(modifier,verticalArrangement=Arrangement.spacedBy(6.dp)) {
         Copy(label,12,Ink.muted)
-        BasicTextField(value,change,textStyle=TextStyle(color=Ink.text,fontFamily=fontFor(value),fontSize=14.sp,textDirection=TextDirection.Content),
+        BasicTextField(value,change,visualTransformation=if(secret)androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,textStyle=TextStyle(color=Ink.text,fontFamily=fontFor(value),fontSize=14.sp,textDirection=TextDirection.Content),
             cursorBrush=SolidColor(Ink.violet),singleLine=!multiline,readOnly=!LocalControlsEnabled.current,
             modifier=Modifier.fillMaxWidth().heightIn(min=if(multiline)100.dp else 38.dp,max=if(multiline)180.dp else 60.dp)
                 .onFocusChanged {focused=it.isFocused}.background(Ink.background,RoundedCornerShape(8.dp))

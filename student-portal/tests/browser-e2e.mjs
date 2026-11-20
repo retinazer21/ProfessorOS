@@ -46,12 +46,39 @@ async function raw(path, token, method = 'GET', body) {
 }
 const readsDenied = r => [401,403].includes(r.status) || (r.status === 200 && Array.isArray(r.body) && r.body.length === 0);
 const actions = {
+    unpublished: async () => {
+        const { aal } = await identity();
+        record('Real user has MFA before publication checks', aal === 'aal2');
+        const result = await supabase.from('portal_published_grades').select('offering_id,student_id');
+        record('No unpublished grade is visible', !result.error && result.data?.length === 0);
+    },
+    publication: async () => {
+        const { s, aal, role } = await identity(); const f = await fixture();
+        record('Published grade read requires verified student session', aal === 'aal2' && role === 'student', s.user.email);
+        const result = await supabase.from('portal_published_grades')
+            .select('offering_id,student_id,score,letter,published_at,portal_offerings(title)');
+        record('Published grade query and course-title join succeed', !result.error);
+        const rows = result.data ?? [];
+        const targetStudent = f.accounts.find(a => a.email === 'professor-os-e2e-student-a@example.invalid');
+        record('Published rows belong only to signed-in student', rows.every(r => r.student_id === s.user.id));
+        record('Signed-in student sees expected publication count', rows.length === (s.user.id === targetStudent.id ? 1 : 0), `${s.user.email}: ${rows.length}`);
+        if (rows.length) {
+            const expected = Number(document.getElementById('expected-publication-score').value);
+            record('Published score matches desktop snapshot', rows.every(r => Number(r.score) === expected));
+            record('Published course and server timestamp are present', rows.every(r => r.portal_offerings?.title && !Number.isNaN(Date.parse(r.published_at))));
+        }
+        const other = f.accounts.find(a => a.role === 'student' && a.id !== s.user.id);
+        const response = await raw(`/rest/v1/portal_published_grades?student_id=eq.${other.id}&select=*`, s.access_token);
+        record('Real student session cannot request another student publications', readsDenied(response));
+        const write = await supabase.from('portal_published_grades').upsert({offering_id:f.offering,student_id:s.user.id,score:100,letter:'A'}).select();
+        record('Real student session cannot publish or overwrite a grade', !!write.error && write.error.code === '42501');
+    },
     inspect: async () => { const v = await identity(); record('Managed session validated by Auth', true, `${v.s.user.email}: ${v.aal}`); },
     pre: async () => {
         const { s, aal, role } = await identity();
         record('Password sign-in remains AAL1', aal === 'aal1', s.user.email);
         record('Role unavailable before MFA', role === null);
-        for (const table of ['portal_records','portal_roles','portal_offerings','portal_enrollments']) {
+        for (const table of ['portal_records','portal_roles','portal_offerings','portal_enrollments','portal_published_grades']) {
             const response = await raw(`/rest/v1/${table}?select=*`, s.access_token);
             record(`AAL1 cannot read ${table}`, readsDenied(response));
         }
@@ -103,6 +130,8 @@ const actions = {
         record('Global logout clears shared browser session', !current.error && current.data.session === null);
         const response = await raw('/rest/v1/portal_records?select=*', captured.access_token);
         record('Signed-out access token cannot read records', readsDenied(response));
+        const publications = await raw('/rest/v1/portal_published_grades?select=*', captured.access_token);
+        record('Signed-out access token cannot read published grades', readsDenied(publications));
         const role = await raw('/rest/v1/rpc/portal_access', captured.access_token,'POST',{});
         record('Signed-out access token cannot authorize role', [401,403].includes(role.status) || (role.status===200 && role.body===null));
         const refresh = await raw('/auth/v1/token?grant_type=refresh_token',null,'POST',{refresh_token:captured.refresh_token});

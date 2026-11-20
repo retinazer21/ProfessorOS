@@ -48,6 +48,11 @@ class GradebookUiTest {
         }
         settled(c)
         onNodeWithTag("nav-Gradebook").performClick();capture("gradebook-initial");val book=c.gradebook!!.book;val first=book.students().single {it.student().studentNumber()=="0001"};val second=book.students().single {it.student().studentNumber()=="0002"}
+        onNodeWithText("Publish final grade").performClick()
+        onNodeWithText("Publish one saved final grade").assertExists()
+        onNodeWithText("Password").assertExists()
+        capture("gradebook-publication")
+        onNodeWithText("Close").performClick()
         val a=book.assessments().first();val b=book.assessments().last()
         fun tag(student:EnrolledStudent,assessment:Assessment)="grade-cell-${student.enrollment().id()}-${assessment.id()}"
         val key=GradeKey(first.enrollment().id(),a.id())

@@ -103,6 +103,7 @@ class AssessmentUiTest {
     private fun ComposeUiTest.settled(c:WorkspaceController){waitForIdle();waitUntil(timeoutMillis=10000){!c.busy};waitForIdle()}
     private fun ComposeUiTest.capture(name:String,tag:String?=null) {
         waitForIdle();val node=if(tag==null)onRoot() else onNodeWithTag(tag);val file=File(System.getProperty("compose.test.output"),"$name.png")
+        file.parentFile.mkdirs()
         ImageIO.write(node.captureToImage().toAwtImage(),"png",file)
     }
 }

@@ -11,11 +11,11 @@ Account password entry is a manual step. Choose test-only passwords and keep the
 ## Next steps once accounts exist
 
 1. Confirm creation through Supabase MCP; assign two student roles and one professor role, and seed two clearly labeled fictional records in a dedicated test offering. Preserve every pre-existing row. Save public fixture IDs (no credentials) to `tests/e2e-fixture.json`.
-2. Open the existing portal at `http://127.0.0.1:5175/#/login` and the isolated test runner at `http://127.0.0.1:5175/tests/e2e.html` in another tab. Both must use the same origin so the SDK can share its managed session.
+2. Open the existing portal at `http://127.0.0.1:5175/ProfessorOS/#/login` and the isolated test runner at `http://127.0.0.1:5175/ProfessorOS/tests/e2e.html` in another tab. Both must use the same origin so the SDK can share its managed session.
 3. Sign in as Student A. Before MFA, run the pre-MFA checks and attempt protected portal URLs. They must remain blocked, and direct REST queries must return no records.
 4. In the portal, choose Set up authenticator. In Google Authenticator, Microsoft Authenticator, or your existing TOTP app, choose Add account → Scan QR code. Scan the portal's QR privately; never save it in a committed screenshot. Enter the current six-digit code directly in the portal and choose Verify and continue. The user performs authenticator enrollment and code entry. Also verify an intentionally invalid code is rejected before entering the correct code.
 5. After verification, run the verified access checks, reload the portal and verify access is restored, open another portal tab, and run managed-session refresh checks.
-6. Capture the session in the runner, use Sign out in the original portal, confirm the second portal tab returns to login, then run the logout/replay checks. Test the browser Back button and reload after logout.
+6. Capture the session in the runner, use Sign out in the original portal, confirm the portal's sign-in form and the runner's SIGNED_OUT event, then run the logout/replay checks. Starting the check while sign-out is still pending tests the wrong state. Test the browser Back button and reload after logout.
 7. Repeat sign-in, MFA and verified access checks for Student B and Professor. Verify repeated password sign-in requires the existing authenticator, rather than creating a new factor.
 8. Export the runner's visible report (no secrets), inspect Auth logs and preserve/identify the fictional fixtures for repeat testing. Do not claim pending manual tests passed.
 

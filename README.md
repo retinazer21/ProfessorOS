@@ -4,7 +4,7 @@ An offline-first academic workspace for university professors, with a separate S
 
 **Student Portal — planned GitHub Pages address:** [retinazer21.github.io/ProfessorOS](https://retinazer21.github.io/ProfessorOS/). Hosting is prepared but publication has not been performed by this change.
 
-> Portal authentication is real. Course, grade, attendance and profile displays remain clearly labeled fictional previews. Desktop-to-portal publishing and real academic data integration are not implemented.
+> Portal authentication and explicit final-grade publishing are implemented. A fictional 72% C grade passed the complete desktop → Supabase → Student Portal workflow with professor/student MFA, student isolation and unpublished-edit privacy. Existing academic preview panels remain fictional. See [acceptance results](docs/PUBLISHING_ACCEPTANCE_REPORT.md), [migration integrity](docs/PUBLICATION_MIGRATION_STATUS.md) and [publishing setup](docs/GRADE_PUBLISHING.md).
 
 ## Features
 
@@ -13,6 +13,7 @@ An offline-first academic workspace for university professors, with a separate S
 | Courses, academic terms, offerings and enrolled rosters | Responsive Studio Window dashboard and course browsing |
 | Lectures and saved attendance with bulk marking | Course details, grades, attendance and profile previews |
 | Gradebook, weighted assessments and configurable scales | Supabase password sign-in and managed sessions |
+| Explicit publication of one saved final grade using professor MFA | Published snapshots visible only to authorized users |
 | Question bank, exam generation and saved exam snapshots | Required authenticator TOTP enrollment and verification |
 | Arabic/English Excel student import and formatted exports | Student/professor roles enforced through database RLS |
 | Exam and answer-key PDF preview/export | Session refresh and global sign-out |
@@ -45,7 +46,7 @@ Student Portal (React + TypeScript + Vite)
     → Supabase PostgreSQL: role/ownership policies and RLS
 
 GitHub Pages serves only the portal's static production build.
-Desktop records are not synchronized with the portal.
+Only explicitly published final-grade snapshots cross this boundary.
 ```
 
 Domain models remain independent of UI and database access. Desktop services own validation and academic calculations; repositories own parameterized SQL. The portal keeps authentication coordination outside page components and checks both MFA assurance and database-assigned access before opening protected routes.
@@ -102,7 +103,7 @@ Open the printed URL at `/ProfessorOS/`. Only a Supabase `sb_publishable_` key b
 - Desktop persistence uses parameterized JDBC queries, foreign keys and versioned migrations. Applied migrations and checksums must be preserved.
 - Local credentials, databases, backups, caches and build output stay outside Git and the Pages artifact. Pages content and frontend configuration are public; access to protected data depends on Auth and RLS.
 
-The recorded interactive acceptance run covered two fictional students and one professor, MFA rejection and success, student isolation, role escalation denial, professor updates with restoration, refresh, logout and token replay. This is scoped test evidence, not a claim of a comprehensive security audit. Account recovery, real university provisioning and academic publishing remain production prerequisites.
+The recorded interactive acceptance runs covered two fictional students and one professor, MFA rejection and success, student isolation, role escalation denial, professor updates with restoration, refresh, logout and token replay. The publishing run additionally verified a desktop-authenticated final-grade write, student reads and write denial, and privacy of later local edits. This is scoped test evidence, not a comprehensive security audit. Account recovery, verified university provisioning/mapping and production operations remain prerequisites for real records.
 
 ## Verification
 
@@ -135,6 +136,6 @@ The **Student Portal Pages** workflow runs only when manually requested on `main
 
 ## Scope and next steps
 
-The desktop workspace is implemented; the portal's academic views are previews behind real authentication. Remaining work includes academic publishing/data adapters, university account delivery and recovery, and a reviewed production operations process. Broader planning, analytics and advanced exam constraints are future work.
+The desktop workspace and minimal final-grade publishing path are implemented and passed fictional live acceptance behind real authentication and RLS. Course/student mapping remains an explicit administrator-verified UUID entry. Broader roster/course publishing, university account delivery and recovery, and a reviewed production operations process remain future work, alongside planning, analytics and advanced exam constraints.
 
 Read [AGENTS.md](AGENTS.md) before development. Preserve user data and existing migration history. Desktop packaging is outside the Pages workflow; this hosting preparation does not build, modify or publish an installer.

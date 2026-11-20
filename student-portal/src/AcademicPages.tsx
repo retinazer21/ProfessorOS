@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PublishedGrades } from './PublishedGrades';
 import { motion, useReducedMotion } from "motion/react";
 import {
     ArrowLeft,
@@ -240,6 +241,7 @@ export function Grades() {
     const reduceMotion = useReducedMotion();
     return (
         <>
+            <PublishedGrades />
             <PageIntro
                 eyebrow="ACADEMIC RECORD"
                 title="Grades & results"

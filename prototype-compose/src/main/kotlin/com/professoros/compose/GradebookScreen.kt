@@ -39,6 +39,7 @@ import java.nio.file.Path
 @Composable private fun GradebookContent(c:WorkspaceController,editor:GradebookEditor) {
     val book=editor.book;val summary=editor.summary()
     var tab by remember {mutableStateOf("Grades")}
+    var publishing by remember {mutableStateOf(false)}
     var query by remember {mutableStateOf("")}
     var categoryId by remember(book.offeringId()) {mutableStateOf<Long?>(null)}
     var assessmentId by remember(book.offeringId()) {mutableStateOf<Long?>(null)}
@@ -58,8 +59,10 @@ import java.nio.file.Path
                 Action("Discard / reload",variant=ActionVariant.WARNING,enabled=!c.busy,modifier=Modifier.testTag("discard-grades")){c.guard {c.refresh()}}
                 Action("Bulk entry",variant=ActionVariant.PRIMARY,enabled=book.assessments().isNotEmpty()&&!c.busy,modifier=Modifier.testTag("bulk-grades")){editor.bulkOpen=!editor.bulkOpen}
                 Action("Export to Excel",enabled=!c.busy){c.exportGradeWorkbook()}
+                Action("Publish final grade",enabled=!c.busy&&!editor.dirty){publishing=!publishing}
             }
         }
+        if(publishing) GradePublishingPanel(c,editor) {publishing=false}
         when(tab) {
             "Grades" -> {
                 if(editor.bulkOpen) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=androidx.compose.ui.Alignment.Bottom) {

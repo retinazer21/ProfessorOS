@@ -1,6 +1,6 @@
 # Supabase Auth and authorization
 
-The Student Portal uses the official `@supabase/supabase-js` SDK (pinned at 2.119.0) for password authentication, persisted/refreshing sessions, TOTP enrollment and verification, and global sign-out. The existing Studio Window login/MFA layout is retained. Desktop Compose/Java/SQLite are unchanged.
+The Student Portal uses the official `@supabase/supabase-js` SDK (pinned at 2.119.0) for password authentication, persisted/refreshing sessions, TOTP enrollment and verification, and global sign-out. The existing Studio Window login/MFA layout is retained. The original authentication phase left the desktop unchanged; the subsequent [explicit publishing feature](../docs/GRADE_PUBLISHING.md) adds optional professor-authenticated publication while preserving offline SQLite workflows.
 
 ## Configuration
 
@@ -29,9 +29,11 @@ Three fictional acceptance-test Auth users now exist with confirmed emails and t
 
 The first password sign-in requires TOTP setup if there is no verified factor. Only successful verification plus an administrator-assigned role opens the workspace. A professor uses the same authenticated shell; no new professor management UI was introduced.
 
-Academic pages still display explicitly labeled fictional data from `src/demo.ts`. The new database tables contain only the isolated acceptance fixtures: three roles, one offering, two enrollments and two records. They are a protected publishing boundary, not a desktop synchronization implementation. A real desktop-to-portal mapping, publishing workflow and UI data adapter remain prerequisites before showing real academic records. Do not import the demo as production data.
+Existing academic preview panels display explicitly labeled fictional data from `src/demo.ts`. The separate Published grades section reads protected Supabase snapshots. The fictional fixtures contain three roles, one offering, two enrollments, two original records and one explicitly published final grade. Desktop publication, student MFA reads, student isolation and unpublished-edit privacy passed [live acceptance](../docs/PUBLISHING_ACCEPTANCE_REPORT.md). Real identities and course/student UUID mappings still require administrator verification before real records are published. Do not import the preview demo as production data.
 
 ## Verification and limits
+
+Publishing addition (2026-11-20): migration `202611200001_published_grades.sql` was applied once and adds an idempotent final-grade snapshot table protected by existing Auth/MFA/RLS helpers. The Grades page reads it separately from previews. Live rollback-only database security tests and actual desktop/student Auth/TOTP acceptance passed. Exactly one intended fictional 72% C publication remains; local edits stayed private and both students passed pre-MFA denial, isolation and completed logout/replay checks. Final lossless verification preserved original records, both history entries, helpers, all 15 policies and Auth identities; zero active test sessions remain. See [acceptance report](../docs/PUBLISHING_ACCEPTANCE_REPORT.md) and [exact migration outcome](../docs/PUBLICATION_MIGRATION_STATUS.md). Earlier empty-table/no-publishing statements describe the original authentication phase. Never edit or reapply either applied migration.
 
 Passed: TypeScript, Vite production build, eight access-state unit tests, three live HTTP negative tests. Live database regression suite (`supabase/tests/authorization.sql`) passed anonymous denial, AAL1 denial for both roles, student isolation, metadata/role escalation, student write denial, professor ownership and cross-offering update/insert denial, unassigned role denial, session-user mismatch, revoked session replay and session expiry. Fixtures were enclosed in a transaction and rolled back; follow-up queries confirmed zero Auth users and zero records, and four RLS-enabled portal tables.
 

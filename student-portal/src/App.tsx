@@ -80,8 +80,8 @@ export default function App() {
                     <div className={route === "/dashboard" ? "sr-only" : "demo-notice"}>
                         <span className="demo-notice-dot" />
                         <span>
-                            Preview mode: all student names, grades, and
-                            schedules are fictional.
+                            Preview panels contain fictional names, grades and schedules.
+                            Published grades are shown separately from these previews.
                         </span>
                     </div>
                     <AnimatePresence mode="wait">

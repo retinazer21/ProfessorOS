@@ -86,8 +86,8 @@ export function Profile() {
                         <div>
                             <h2>Built for a clear boundary</h2>
                             <p>
-                                This prototype contains only fictional academic
-                                data. Account authentication is live; academic data integration is pending.
+                                Preview panels contain fictional academic data.
+                                Published grades are loaded separately from the secure portal after MFA.
                             </p>
                         </div>
                     </Panel>
