@@ -35,17 +35,4 @@ The desktop stores refresh credentials using Windows current-user DPAPI. Normal 
 | React, TypeScript, and Vite | Student Portal, served by GitHub Pages |
 
 Both applications require an authorized account and TOTP MFA for protected records. Database policies scope academic access to authorized assignments or enrollments. Draft grades remain private until explicitly published.
-
-## Build from source
-
-Install a Windows x64 JDK 25, set `JAVA_HOME`, and run these commands from the repository root. Maven and Gradle share generated outputs, so run them sequentially.
-
-```powershell
-.\mvnw.cmd clean verify
-.\prototype-compose\gradlew.bat -p prototype-compose test
-.\prototype-compose\gradlew.bat -p prototype-compose run
-```
-
-For online development, use the public Supabase URL and publishable key. The desktop accepts `PROFESSOR_OS_SUPABASE_URL` and `PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY`, or reads the portal's local development configuration through Gradle. For installer builds and release-specific configuration, follow [Windows packaging](docs/WINDOWS_PACKAGING.md).
-
-For portal development, use Node.js 24 and follow the [Student Portal setup](student-portal/README.md). Database changes use new versioned migrations. See the [authentication setup](student-portal/AUTH_SETUP.md), [desktop cloud integration](docs/DESKTOP_ONLINE_MIGRATION.md), and [academic workflows](docs/USER_GUIDE.md).
+ the [Student Portal setup](student-portal/README.md). Database changes use new versioned migrations. See the [authentication setup](student-portal/AUTH_SETUP.md), [desktop cloud integration](docs/DESKTOP_ONLINE_MIGRATION.md), and [academic workflows](docs/USER_GUIDE.md).
