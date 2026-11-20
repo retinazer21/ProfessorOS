@@ -265,3 +265,33 @@
 
 .mfa-qr { width: 200px; height: 200px; background: white; padding: 12px; border-radius: 12px; }
 .auth-card button:disabled { opacity: .55; cursor: wait; }
+
+/* Shared academic record rows use the active Studio theme tokens. */
+.record-filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr)); gap:12px; }
+.record-filters label { display:grid; gap:5px; min-width:0; font-size:13px; color:var(--muted); }
+.record-filters .search-box,.record-filters .select-wrap,.record-filters select { width:100%; min-width:0; }
+.record-summary { display:flex; flex-wrap:wrap; gap:8px 22px; padding:12px 0; margin:10px 0 0; list-style:none; border-bottom:1px solid var(--border); color:var(--muted); font-size:13px; }
+.record-summary strong { color:var(--text); font-variant-numeric:tabular-nums; }
+.attendance-course { margin-top:20px; }
+.attendance-course h2 { font-size:16px; margin:0 0 8px; overflow-wrap:anywhere; }
+.attendance-lecture { border-top:1px solid var(--border); }
+.attendance-lecture summary { display:flex; align-items:center; gap:12px; justify-content:space-between; cursor:pointer; padding:10px 0; }
+.attendance-lecture summary strong::before { content:'+ '; color:var(--accent); }
+.attendance-lecture[open] summary strong::before { content:'− '; }
+.attendance-lecture summary small,.record-list small { display:block; margin-top:3px; font-size:12px; color:var(--muted); }
+.record-list { list-style:none; margin:0; padding:0; }
+.record-list > li { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--border); overflow-wrap:anywhere; }
+.attendance-lecture .record-list { padding-left:14px; }
+.record-status { text-align:center; flex-shrink:0; padding:3px 7px; border:1px solid var(--border); border-radius:6px; font-size:12px; }
+.record-status[data-status="PRESENT"],.record-status[data-status="COMPLETED"] { color:var(--positive); }
+.record-status[data-status="ABSENT"] { color:var(--danger); }
+.record-status[data-status="LATE"],.record-status[data-status="PARTIALLY_COMPLETED"] { color:var(--warning); }
+.record-status[data-status="EXCUSED"] { color:var(--info); }
+.record-pagination { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.record-score { display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
+
+@media (max-width: 600px) {
+    .record-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .record-filters label:first-child { grid-column: 1 / -1; }
+    .record-summary { gap: 8px 14px; }
+}

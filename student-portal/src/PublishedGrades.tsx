@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './auth/client';
 import { Panel, SectionHeading } from './ui';
+import { formatRecordDate } from './RecordViews';
 
 type PublishedGrade = { offering_id: string; student_id: string; score: number; letter: string; published_at: string; portal_offerings: { title: string } | null };
 export function PublishedGrades() {
@@ -25,13 +26,12 @@ export function PublishedGrades() {
         {state === 'loading' && <p role="status">Loading published grades…</p>}
         {state === 'error' && <p role="alert">Published grades could not be loaded. Check your connection or contact your university.</p>}
         {state === 'ready' && rows.length === 0 && <p>No grades have been published for your account.</p>}
-        {rows.length > 0 && <div className="result-table-wrap"><table className="result-table">
-            <thead><tr><th>Course</th><th>Score</th><th>Result</th><th>Published</th></tr></thead>
-            <tbody>{rows.map(row => <tr key={`${row.offering_id}:${row.student_id}`}>
-                <td>{row.portal_offerings?.title ?? 'Course'}<small> · {row.student_id}</small></td>
-                <td>{row.score}%</td><td>{row.letter}</td><td>{new Date(row.published_at).toLocaleString()}</td>
-            </tr>)}</tbody>
-        </table></div>}
+        {rows.length > 0 && <ul className="record-list" aria-label="Published grades">{rows.map(row =>
+            <li key={`${row.offering_id}:${row.student_id}`}>
+                <div><strong>{row.portal_offerings?.title ?? 'Course'}</strong><small>Published {formatRecordDate(row.published_at)}</small></div>
+                <div className="record-score"><strong>{row.score}%</strong><span className="record-status" aria-label={`Grade ${row.letter}`}>{row.letter}</span></div>
+            </li>
+        )}</ul>}
         <button className="button-secondary" disabled={state === 'loading'} onClick={() => setRevision(n => n + 1)}>Refresh published grades</button>
         <p>Only explicitly published snapshots appear here. Unsaved and unpublished desktop changes are private.</p>
     </Panel>;

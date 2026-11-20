@@ -64,3 +64,12 @@ Roster writes preserve published history when enrollment status changes. Draft g
 ## Current ownership
 
 On November 20, 2026, the private desktop workspace and all three portal offerings were transferred to `professor01@example.com`. The new professor signed in with MFA, read all 16 academic tables and 840 attendance marks, and created and removed a fictional test course. The retired test account had no remaining ownership references or Storage files and was deleted through Supabase Auth Admin. A final comparison verified the inherited data, RLS policies, and migration history.
+
+## Windows restart check
+
+1. Launch the online desktop, sign in with professor MFA, and open Attendance without making edits. Close the window normally rather than using Sign out.
+2. Restart Windows. Sign in to the same Windows user profile and launch Professor OS with the same Supabase project configured. Confirm the workspace opens without a password or authenticator prompt and that Attendance loads.
+3. In a separately authenticated Portal session for the same professor, sign out. Refresh Desktop and check that it still loads Attendance.
+4. Sign out explicitly in Desktop. Close and relaunch it and confirm the professor sign-in screen appears.
+
+Use the existing Windows profile and avoid copying or inspecting the protected credential file. Current-user DPAPI reopening and live Supabase session restoration were verified. A physical Windows reboot has not been performed.

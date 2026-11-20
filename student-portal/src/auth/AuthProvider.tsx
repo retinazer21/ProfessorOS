@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loggingOut.current = true; ++generation.current;
         setAccess({ stage: 'loading' }); setError('');
         try {
-            const { error } = await supabase.auth.signOut({ scope: 'global' });
+            const { error } = await supabase.auth.signOut({ scope: 'local' });
             if (error) throw error;
             loggingOut.current = false;
             setAccess({ stage: 'login' }); window.location.hash = '/login';

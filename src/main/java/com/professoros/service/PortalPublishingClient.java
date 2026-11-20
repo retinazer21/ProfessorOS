@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** Optional online boundary. Only publishable configuration and short-lived user tokens are used.
- * Passwords/tokens are never persisted or logged. Redirects are never followed. */
+ * Access tokens and passwords stay in memory. An optional protected store keeps the refresh credential. */
 public final class PortalPublishingClient {
     private static final String SAVE_ATTENDANCE = "/rest/v1/rpc/desktop_save_attendance_sheet";
     private static final String PUBLISH_GRADE = "/rest/v1/rpc/desktop_publish_grade";
@@ -43,6 +43,18 @@ public final class PortalPublishingClient {
     private String refreshToken;
     private long refreshAfter;
     private Path imageDirectory;
+    private RefreshStore store;
+    private boolean refreshNotSaved;
+
+    public interface RefreshStore {
+        String load() throws java.io.IOException;
+        void save(String refreshCredential) throws java.io.IOException;
+        void clear() throws java.io.IOException;
+    }
+
+    private static final class SessionEnded extends DomainValidationException {
+        SessionEnded() { super("Your professor session ended. Sign in with your authenticator again."); }
+    }
 
     private void acceptSession(JsonObject response) {
         token = response.get("access_token").getAsString();
@@ -52,10 +64,51 @@ public final class PortalPublishingClient {
     }
 
     private void refreshIfDue() throws Exception {
+        if (refreshNotSaved) saveRotatedCredential();
         if (refreshToken != null && java.time.Instant.now().getEpochSecond() >= refreshAfter) {
-            var response = request("POST", "/auth/v1/token?grant_type=refresh_token",
-                    Map.of("refresh_token", refreshToken), null);
-            acceptSession(response.getAsJsonObject());
+            rotateRefreshCredential();
+        }
+    }
+
+    private void rotateRefreshCredential() throws Exception {
+        var response = request("POST", "/auth/v1/token?grant_type=refresh_token",
+                Map.of("refresh_token", refreshToken), null);
+        acceptSession(response.getAsJsonObject());
+        refreshNotSaved = store != null;
+        if (refreshNotSaved) saveRotatedCredential();
+    }
+
+    private void saveRotatedCredential() throws java.io.IOException {
+        store.save(requireRefreshCredential());
+        refreshNotSaved = false;
+    }
+
+    private String requireRefreshCredential() throws java.io.IOException {
+        if (refreshToken == null || refreshToken.isBlank()) throw new java.io.IOException("Supabase returned no refresh credential.");
+        return refreshToken;
+    }
+
+    public synchronized void rememberSession(RefreshStore protectedStore) throws Exception {
+        if (!professorAuthorized) throw new SessionEnded();
+        if (protectedStore != null) protectedStore.save(requireRefreshCredential());
+        store = protectedStore;
+    }
+
+    public synchronized boolean restoreSession(RefreshStore protectedStore) throws Exception {
+        if (protectedStore == null) return false;
+        var saved = protectedStore.load();
+        if (saved == null) return false;
+        store = protectedStore;
+        refreshToken = saved;
+        try {
+            rotateRefreshCredential();
+            if (!authorizedProfessor()) return false;
+            account=UUID.fromString(request("GET", "/auth/v1/user", null, null).getAsJsonObject().get("id").getAsString());
+            professorAuthorized = true;
+            return true;
+        } catch (SessionEnded ended) {
+            invalidateSession();
+            return false;
         }
     }
 
@@ -94,6 +147,9 @@ public final class PortalPublishingClient {
                 && hasErrorCode(response.body(), "PGRST202")) {
             throw new MissingAttendanceSheet();
         }
+        if ((path.contains("grant_type=refresh_token") || path.equals("/auth/v1/user") || path.equals("/rest/v1/rpc/portal_access"))
+                && (status == 401 || status == 403 || isEndedAuthSession(response.body(),path.contains("grant_type=refresh_token"))))
+            throw new SessionEnded();
         if (status < 200 || status >= 300)
             throw new DomainValidationException("Portal request rejected (HTTP " + response.statusCode() + "). Check sign-in, MFA, mapping and connectivity; no success is assumed.");
         return response.body().isBlank() ? JsonNull.INSTANCE : JsonParser.parseString(response.body());
@@ -106,6 +162,19 @@ public final class PortalPublishingClient {
         } catch (JsonParseException invalidResponse) {
             return false;
         }
+    }
+
+    private static boolean isEndedAuthSession(String body, boolean refreshing) {
+        try {
+            var parsed = JsonParser.parseString(body);
+            if (!parsed.isJsonObject()) return false;
+            var error = parsed.getAsJsonObject();
+            return List.of("code","error_code","error").stream().map(error::get)
+                    .filter(value -> value != null && value.isJsonPrimitive()).map(JsonElement::getAsString)
+                    .anyMatch(code -> List.of("refresh_token_not_found","refresh_token_already_used","session_not_found",
+                            "session_expired","user_not_found","user_banned").contains(code)
+                            || refreshing && "invalid_grant".equals(code));
+        } catch (JsonParseException malformed) { return false; }
     }
     public synchronized void signIn(String email, String password, String code) throws Exception {
         if (token != null) throw new IllegalStateException("Sign out before signing in again.");
@@ -136,9 +205,15 @@ public final class PortalPublishingClient {
     }
     public synchronized boolean authorizedProfessor() throws Exception {
         if (token == null) return false;
-        refreshIfDue();
-        var role = request("POST", "/rest/v1/rpc/portal_access", Map.of(), null);
-        return role.isJsonPrimitive() && "professor".equals(role.getAsString());
+        try {
+            refreshIfDue();
+            var role = request("POST", "/rest/v1/rpc/portal_access", Map.of(), null);
+            if (role.isJsonPrimitive() && "professor".equals(role.getAsString())) return true;
+        } catch (SessionEnded ended) {
+            // Only a definitive server response invalidates a remembered session.
+        }
+        if (store != null || professorAuthorized) invalidateSession();
+        return false;
     }
 
     public record AttendanceMark(java.util.UUID enrollment, java.util.UUID lecture, String course,
@@ -401,13 +476,34 @@ public final class PortalPublishingClient {
         return UUID.fromString(result.getAsString());
     }
     public synchronized void signOut() throws Exception {
-        if (token == null) return;
-        try { request("POST", "/auth/v1/logout?scope=local", Map.of(), null); }
+        try {
+            if (token != null) {
+                refreshIfDue();
+                request("POST", "/auth/v1/logout?scope=local", Map.of(), null);
+            }
+        }
+        catch (SessionEnded ended) { /* The session no longer exists. */ }
+        finally { invalidateSession(); }
+    }
+
+    private void invalidateSession() throws java.io.IOException {
+        try { if (store != null) store.clear(); }
         finally {
+            store = null;
+            closeLocalSession();
+        }
+    }
+
+    /** Release memory and temporary assets when closing the app without signing out. */
+    public synchronized void closeLocalSession() {
+        try {
             token = null;
             refreshToken = null;
+            refreshNotSaved = false;
             account = null;
             professorAuthorized = false;
+        }
+        finally {
             if (imageDirectory != null) {
                 try {
                     List<Path> cached;

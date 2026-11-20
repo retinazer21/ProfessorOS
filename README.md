@@ -16,7 +16,7 @@ An online academic workspace for university professors, with a separate Student 
 | Explicit publication of one saved final grade using professor MFA | Published snapshots visible only to authorized users |
 | Question bank, exam generation and saved exam snapshots | Required authenticator TOTP enrollment and verification |
 | Arabic/English Excel student import and formatted exports | Student/professor roles enforced through database RLS |
-| Exam and answer-key PDF preview/export | Session refresh and global sign-out |
+| Exam and answer-key PDF preview/export | Session refresh and browser-session sign-out |
 | Protected SQLite recovery workspace and local appearance settings | Hash routing compatible with static GitHub Pages hosting |
 
 Desktop Settings and the portal’s Appearance gallery share ten workspace themes. Choose a theme or follow the system, adjust the accent, and reduce motion. Each device or browser keeps its own preference.
@@ -103,7 +103,7 @@ Open the printed URL at `/ProfessorOS/`. Only a Supabase `sb_publishable_` key b
 
 - Supabase manages password authentication, session refresh and TOTP MFA. Academic authorization requires a server-validated user, AAL2 and an assigned database role.
 - PostgreSQL RLS restricts students to their enrolled records and professors to their assigned offerings. Browser-editable metadata cannot grant privileges.
-- Protected database access checks the live session, so global sign-out blocks replay of its previously issued token against portal records.
+- Protected database access checks the live session, so signing out blocks replay of that session’s token. Desktop and Portal sign out independently. Windows Desktop stores the refresh credential with current-user DPAPI and validates the professor role and MFA when it restores a session.
 - Role, offering and enrollment provisioning is restricted to trusted administration. Frontend builds never receive an administrative or service-role key.
 - Desktop persistence uses parameterized JDBC queries, foreign keys and versioned migrations. Applied migrations and checksums must be preserved.
 - Local credentials, databases, backups, caches and build output stay outside Git and the Pages artifact. Pages content and frontend configuration are public; access to protected data depends on Auth and RLS.

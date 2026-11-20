@@ -127,7 +127,7 @@ const actions = {
     replay: async () => {
         if (!captured) throw new Error('Capture a session before signing out');
         const current = await supabase.auth.getSession();
-        record('Global logout clears shared browser session', !current.error && current.data.session === null);
+        record('Portal logout clears the session shared by these browser tabs', !current.error && current.data.session === null);
         const response = await raw('/rest/v1/portal_records?select=*', captured.access_token);
         record('Signed-out access token cannot read records', readsDenied(response));
         const publications = await raw('/rest/v1/portal_published_grades?select=*', captured.access_token);

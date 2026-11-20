@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Search } from 'lucide-react';
 import { AcademicRows, courseMeta, type Course, type Lecture, type Mark } from './academic';
 import { PublishedGrades } from './PublishedGrades';
+import { AttendanceRecords, formatRecordDate, RecordStatus } from './RecordViews';
 import { CourseArt, CourseCard, PageIntro, Panel, SectionHeading } from './ui';
 
 export function Courses() {
@@ -106,32 +107,14 @@ export function CourseDetail({ id }: { id: string }) {
                                 <AcademicRows<Lecture> resource="portal_course_lectures" target={id}>
                                     {(lectures) =>
                                         lectures.length ? (
-                                            <div className="result-table-wrap">
-                                                <table className="result-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Lecture</th>
-                                                            <th>Date</th>
-                                                            <th>Status</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {lectures.map((l) => (
-                                                            <tr key={l.id}>
-                                                                <td>
-                                                                    {l.number}. {l.title}
-                                                                </td>
-                                                                <td>{l.day}</td>
-                                                                <td>
-                                                                    {l.status
-                                                                        .toLowerCase()
-                                                                        .replaceAll('_', ' ')}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                            <ul className="record-list">
+                                                {lectures.map((lecture) => (
+                                                    <li key={lecture.id}>
+                                                        <div><strong>{lecture.number}. {lecture.title}</strong><small>{formatRecordDate(lecture.day)}</small></div>
+                                                        <RecordStatus status={lecture.status} />
+                                                    </li>
+                                                ))}
+                                            </ul>
                                         ) : (
                                             <p>No completed lectures are available.</p>
                                         )
@@ -160,72 +143,11 @@ export function Grades() {
 }
 
 export function Attendance() {
-    const [page, setPage] = useState(0);
     return (
         <>
-            <PageIntro
-                eyebrow="ACADEMIC RECORD"
-                title="Attendance"
-                description="Attendance recorded for completed lectures."
-            />
+            <PageIntro eyebrow="ACADEMIC RECORD" title="Attendance" description="Review recorded marks by course and lecture." />
             <AcademicRows<Mark> resource="portal_attendance_register">
-                {(marks) => {
-                    const current = Math.min(page, Math.max(0, Math.ceil(marks.length / 40) - 1));
-                    return (
-                        <Panel>
-                            <SectionHeading title="Lecture attendance" />
-                            {marks.length ? (
-                                <>
-                                    <div className="result-table-wrap">
-                                        <table className="result-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Date</th>
-                                                    <th>Course</th>
-                                                    <th>Lecture</th>
-                                                    <th>Student</th>
-                                                    <th>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {marks.slice(current * 40, (current + 1) * 40).map((m) => (
-                                                    <tr key={m.enrollment_id + ':' + m.lecture_id}>
-                                                        <td>{m.day}</td>
-                                                        <td>{m.course}</td>
-                                                        <td>{m.lecture}</td>
-                                                        <td>{m.student}</td>
-                                                        <td>{m.status.toLowerCase()}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    {marks.length > 40 && (
-                                        <nav aria-label="Attendance pages">
-                                            <button
-                                                className="button-secondary"
-                                                disabled={!current}
-                                                onClick={() => setPage(current - 1)}
-                                            >
-                                                Previous
-                                            </button>{' '}
-                                            Page {current + 1} of {Math.ceil(marks.length / 40)}{' '}
-                                            <button
-                                                className="button-secondary"
-                                                disabled={(current + 1) * 40 >= marks.length}
-                                                onClick={() => setPage(current + 1)}
-                                            >
-                                                Next
-                                            </button>
-                                        </nav>
-                                    )}
-                                </>
-                            ) : (
-                                <p>No attendance has been recorded for your account.</p>
-                            )}
-                        </Panel>
-                    );
-                }}
+                {(marks) => <AttendanceRecords marks={marks} />}
             </AcademicRows>
         </>
     );

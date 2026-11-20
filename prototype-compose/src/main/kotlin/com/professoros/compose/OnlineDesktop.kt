@@ -2,12 +2,16 @@ package com.professoros.compose
 
 import androidx.compose.runtime.*
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import com.professoros.app.AppPaths
 import com.professoros.service.PortalPublishingClient
+import com.professoros.service.DesktopSessionStore
 import kotlinx.coroutines.*
 
 /** Online cutover entry. The SQLite recovery database is never opened by this application. */
@@ -15,7 +19,10 @@ fun onlineDesktop() = application {
     val scope=rememberCoroutineScope()
     val settings=remember {AppearanceSettings(AppPaths.databaseFile(),scope)}
     var session by remember {mutableStateOf<PortalPublishingClient?>(null)}
-    var busy by remember {mutableStateOf(false)}
+    var busy by remember {mutableStateOf(true)}
+    var restoreBlocked by remember {mutableStateOf(false)}
+    var vault by remember {mutableStateOf<DesktopSessionStore?>(null)}
+    var storageReady by remember {mutableStateOf(false)}
     var failure by remember {mutableStateOf<String?>(null)}
     var registerBusy by remember { mutableStateOf(false) }
     var academicCloseGuard by remember { mutableStateOf<((() -> Unit) -> Unit)?>(null) }
@@ -25,6 +32,33 @@ fun onlineDesktop() = application {
     val height = System.getProperty("professoros.preview.height")?.toIntOrNull()?.coerceIn(660,2160) ?: 860
     var draftOwner by remember {mutableStateOf<java.util.UUID?>(null)}
     var exitAfterDiscard by remember { mutableStateOf<Boolean?>(null) }
+    val origin = System.getenv("PROFESSOR_OS_SUPABASE_URL")
+    fun newClient() = PortalPublishingClient(origin,System.getenv("PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY"))
+    suspend fun restore() {
+        busy=true
+        try {
+            if (!storageReady) {
+                vault=withContext(Dispatchers.IO){DesktopSessionStore.open(origin)}
+                storageReady=true
+            }
+            val client=withContext(Dispatchers.IO) {
+                if(vault==null) null else newClient().let { if(it.restoreSession(vault)) it else null }
+            }
+            session=client
+            draftOwner=client?.professorId()
+            restoreBlocked=false
+            failure=null
+        } catch(cancelled:CancellationException) {throw cancelled}
+        catch(e:Exception) {
+            restoreBlocked=true
+            failure="Could not restore your saved session. Check the connection and close any other Professor OS windows, then retry."
+        } finally {busy=false}
+    }
+    LaunchedEffect(Unit) {restore()}
+    DisposableEffect(vault) {
+        val current=vault
+        onDispose { current?.close() }
+    }
     fun logout(close:Boolean,retainDrafts:Boolean=false) {
         if(busy)return
         val previous=session
@@ -34,7 +68,17 @@ fun onlineDesktop() = application {
         exitAfterDiscard=null
         busy=true
         scope.launch {
-            try {withContext(Dispatchers.IO){previous?.signOut()};failure=if(retainDrafts && drafts.isNotEmpty()) "Sign in again with the same professor account to recover pending edits." else null}
+            try {
+                withContext(Dispatchers.IO) {
+                    when {
+                        close || retainDrafts -> previous?.closeLocalSession()
+                        previous != null -> previous.signOut()
+                        else -> vault?.clear()
+                    }
+                }
+                restoreBlocked=false
+                failure=if(retainDrafts) "Your professor access ended. Sign in again to continue." else null
+            }
             catch(e:Exception) {failure="The workspace is locked. Server sign-out could not be confirmed."}
             finally {busy=false;if(close)exitApplication()}
         }
@@ -57,16 +101,27 @@ fun onlineDesktop() = application {
         val focused=LocalWindowInfo.current.isWindowFocused
         CompositionLocalProvider(LocalPalette provides workspacePalette(settings.mode,isSystemInDarkTheme(),settings.accent),
             LocalReduced provides (settings.reduced || systemReducesMotion())) {
-            if(active==null) ProfessorLogin(busy,failure) {email,password,totp->
+            if(active==null && restoreBlocked) {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+                    Panel {
+                        Copy(failure.orEmpty())
+                        Toolbar {
+                            Action("Retry",enabled=!busy){scope.launch {restore()}}
+                            Action("Forget saved session",enabled=!busy&&storageReady){logout(false)}
+                        }
+                    }
+                }
+            } else if(active==null) ProfessorLogin(busy,if(busy) "Checking your professor session…" else failure) {email,password,totp->
                 busy=true;failure=null
                 scope.launch {
                     try {
                         session=withContext(Dispatchers.IO){
-                            val client=PortalPublishingClient(System.getenv("PROFESSOR_OS_SUPABASE_URL"),System.getenv("PROFESSOR_OS_SUPABASE_PUBLISHABLE_KEY"))
+                            val client=newClient()
                             try {
                                 client.signIn(email,password,totp)
                                 if(drafts.isNotEmpty() && draftOwner!=client.professorId())
                                     throw com.professoros.model.DomainValidationException("Sign in with the account that owns the pending edits.")
+                                client.rememberSession(vault)
                                 client
                             }
                             catch(e:Exception){try {client.signOut()}catch(cleanup:Exception){e.addSuppressed(cleanup)};throw e}
@@ -77,10 +132,10 @@ fun onlineDesktop() = application {
                 }
             } else {
                 LaunchedEffect(active,focused) {
-                    while(focused && session===active) {
+                    while(session===active) {
                         val authorized=try {withContext(Dispatchers.IO){active.authorizedProfessor()}}
                             catch(e:java.io.IOException){null}
-                            catch(e:com.professoros.model.DomainValidationException){false}
+                            catch(e:com.professoros.model.DomainValidationException){null}
                         if(authorized==false && session===active) {logout(false,true);break}
                         delay(30_000)
                     }
