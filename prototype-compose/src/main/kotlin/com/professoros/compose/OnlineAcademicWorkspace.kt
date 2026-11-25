@@ -40,14 +40,14 @@ internal fun OnlineAcademicWorkspace(client: PortalPublishingClient, settings: A
     val attendanceScope = rememberCoroutineScope()
     var page by remember(client) { mutableStateOf(if(drafts.isEmpty()) "Overview" else "Attendance") }
     var attendanceRefresh by remember(client) { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize().background(Ink.background)) {
+    Box(Modifier.fillMaxSize().background(Ink.background)) {
         val model = projection
         if (model == null && page == "Attendance") {
             ProfessorDashboard(null,attendance.busy,null,page,{ page=it },{ attendanceRefresh++ },{},
                 embeddedAttendance=true, online=true,sessionActions={ Action("Sign out",quiet=true,enabled=!attendance.busy,onClick=logout) }) {
                 OnlineAttendance(client,drafts,stateChanged,logout,attendance,attendanceRefresh,embedded=true,scope=attendanceScope)
             }
-            return@Column
+            return@Box
         }
         if (model == null) {
             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -57,7 +57,7 @@ internal fun OnlineAcademicWorkspace(client: PortalPublishingClient, settings: A
                 Action("Attendance"){page="Attendance"}
                 Action("Sign out",quiet=true,onClick=logout)
             }
-            return@Column
+            return@Box
         }
         val scope = rememberCoroutineScope()
         val workspace = remember(model) {

@@ -15,7 +15,7 @@ The in-process Maven option is the documented workaround for the original machin
 
 Set `PROFESSOR_OS_RELEASE_SUPABASE_URL` to the HTTPS project origin and `PROFESSOR_OS_RELEASE_SUPABASE_PUBLISHABLE_KEY` to its public `sb_publishable_` key before building. The installer stores those public values in its launcher configuration. Installed users can sign in without Gradle, developer environment variables, or a portal `.env.local`.
 
-Installer output: `prototype-compose/build/compose/binaries/main/exe/Professor OS-1.1.0.exe`.
+Installer output: `prototype-compose/build/compose/binaries/main/exe/Professor OS-1.1.1.exe`.
 
 The installer creates Desktop and Start Menu shortcuts, uses the official icon for launcher/installer, and includes a full runtime to cover JDBC, POI, PDFBox, AWT and service/reflection dependencies reliably. Package version must increase for updates. Keep upgrade UUID `b5680b84-3e0b-4a04-9550-8745858157d9` fixed. Windows rejects a different build with the same installed version; do not use same-version reinstalls as an upgrade strategy.
 
@@ -64,3 +64,9 @@ A separate installed-app session passed fresh professor TOTP, switched to Oceani
 Windows x64, 143,449,600 bytes. SHA-256 `f5bb0b7b1e0c3bfd036717c8820d26d174f52f88fce0126193d4b0f67bc4c83e`. The rebuilt EXE carries the online workspace and SQLite recovery description. All 234 Java and 49 Compose tests passed.
 
 Replacing the earlier 1.1.0 candidate on the same Windows profile preserved the encrypted session, database and preferences byte-for-byte through uninstall and reinstall. The installed app restored the authenticated workspace and displayed the new Settings wording. The physical reboot and clean-machine checks remain pending.
+
+## Windows 1.1.1 hotfix
+
+Version 1.1.1 restores online workspace dialogs and corrects the Select and Saving ellipses and sort arrows. The unsigned Windows x64 installer is 143,449,600 bytes. SHA-256: `569387651a10e006e92af422c60cb1350b46c04057f36b3633be335f54173b89`.
+
+All 49 Compose tests passed. On the development machine, an in-place upgrade from 1.1.0 preserved the recovery database, appearance preferences, and encrypted session byte-for-byte. The installed app restored the session. New offering and New question opened by clicking their buttons, and the Select label and table sort glyph were checked. Physical reboot and clean-machine testing remain pending.

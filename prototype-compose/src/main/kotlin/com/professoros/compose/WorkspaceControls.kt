@@ -45,7 +45,7 @@ import androidx.compose.ui.window.*
     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
         Copy(label,12,Ink.muted)
         Box {
-            Action(choices.firstOrNull {it.value==value}?.label?:"Selectâ€¦","chevrons",modifier=Modifier.fillMaxWidth().testTag(tag)) {expanded=true;query=""}
+            Action(choices.firstOrNull {it.value==value}?.label?:"Select…","chevrons",modifier=Modifier.fillMaxWidth().testTag(tag)) {expanded=true;query=""}
             if(expanded) Popup(alignment=Alignment.TopStart,onDismissRequest={expanded=false},properties=PopupProperties(focusable=true)) {
                 val rows=remember(choices,query) {choices.filter {it.label.contains(query,true)}}
                 var cursor by remember(query) {mutableStateOf(0)}
@@ -92,7 +92,7 @@ data class TableColumn<T>(val title:String,val weight:Float=1f,val text:(T)->Str
                 val focused by interactions.collectIsFocusedAsState()
                 Box(Modifier.weight(column.weight).border(if(focused)2.dp else 1.dp,if(focused)Ink.violet else Ink.raised)
                     .clickable(interactionSource=interactions,indication=null,enabled=enabled) {if(sort==index)descending=!descending else {sort=index;descending=false}}.padding(6.dp)) {
-                    Copy(column.title+if(sort==index)if(descending)" â†“" else " â†‘" else "",11,Ink.muted,FontWeight.Medium)
+                    Copy(column.title+if(sort==index)if(descending)" ↓" else " ↑" else "",11,Ink.muted,FontWeight.Medium)
                 }
             }
         }
@@ -149,7 +149,7 @@ data class TableColumn<T>(val title:String,val weight:Float=1f,val text:(T)->Str
         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
             c.error?.let {Copy(it,13,Ink.violet,modifier=Modifier.testTag("form-error"))}
             Toolbar {
-                Action(if(c.busy)"Savingâ€¦" else "Save","check",variant=ActionVariant.SUCCESS,enabled=!c.busy,modifier=Modifier.testTag("save-form"),onClick=c::saveForm)
+                Action(if(c.busy)"Saving…" else "Save","check",variant=ActionVariant.SUCCESS,enabled=!c.busy,modifier=Modifier.testTag("save-form"),onClick=c::saveForm)
                 Action("Cancel",enabled=!c.busy,onClick=c::closeEditor)
             }
         }

@@ -2,7 +2,7 @@
 
 Professor OS is an academic workspace for university faculty, with a companion Student Portal. Faculty manage teaching records in the Windows desktop app. Students can view their authorized courses, lectures, attendance, and published grades online.
 
-[Download the Windows x64 installer](https://github.com/retinazer21/ProfessorOS/releases/download/v1.1.0/Professor.OS-1.1.0.exe) · [Release notes and checksum](https://github.com/retinazer21/ProfessorOS/releases/tag/v1.1.0) · [Open the Student Portal](https://retinazer21.github.io/ProfessorOS/)
+[Download the Windows x64 installer](https://github.com/retinazer21/ProfessorOS/releases/download/v1.1.1/Professor.OS-1.1.1.exe) · [Release notes and checksum](https://github.com/retinazer21/ProfessorOS/releases/tag/v1.1.1) · [Open the Student Portal](https://retinazer21.github.io/ProfessorOS/)
 
 ## Key features
 
@@ -91,7 +91,7 @@ Attendance saves compare expected statuses in one transaction. A conflict rolls 
 
 ## Installation, testing, and deployment
 
-1. Download the Windows x64 EXE from the [1.1.0 release](https://github.com/retinazer21/ProfessorOS/releases/tag/v1.1.0) and compare its SHA-256 with the release notes.
+1. Download the Windows x64 EXE from the [1.1.1 release](https://github.com/retinazer21/ProfessorOS/releases/tag/v1.1.1) and compare its SHA-256 with the release notes.
 2. Close any running Professor OS instance, run the installer, and launch **Professor OS** from Start. Java is bundled.
 3. Sign in with a provisioned faculty account and a current authenticator code. The online workspace requires an internet connection.
 
@@ -115,4 +115,4 @@ The server checks the previously read value or revision. A stale request returns
 
 ### What are the current limitations?
 
-The private desktop workspace uses a single-owner model and loads a full projection. Recovery and online data do not merge automatically. Windows 1.1.0 is an unsigned x64 prerelease. Physical reboot and clean-machine testing remain pending.
+The private desktop workspace uses a single-owner model and loads a full projection. Recovery and online data do not merge automatically. Windows 1.1.1 is an unsigned x64 prerelease. Physical reboot and clean-machine testing remain pending.

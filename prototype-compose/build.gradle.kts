@@ -30,7 +30,7 @@ dependencies {
     testImplementation(fileTree("../target/compose-libs") { include("*.jar") }.builtBy(backend))
 }
 val desktopPackageName = "Professor OS"
-val desktopPackageVersion = "1.1.0"
+val desktopPackageVersion = "1.1.1"
 val desktopPackageDescription = "Online academic workspace for university professors with SQLite recovery"
 val desktopUpgradeUuid = "b5680b84-3e0b-4a04-9550-8745858157d9"
 val releaseOrigin = providers.environmentVariable("PROFESSOR_OS_RELEASE_SUPABASE_URL").orNull
